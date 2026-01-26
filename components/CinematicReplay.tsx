@@ -88,7 +88,7 @@ const CinematicReplayContent: React.FC<CinematicReplayProps> = ({ nodes, edges, 
         const formattedEdges: Edge[] = edges.map((e, idx) => {
             const edgeIdx = idx + nodes.length + 1;
             const isVisible = edgeIdx <= activeStep;
-            const isActive = e.id === currentActiveEdgeId;
+            const isActive = edgeIdx === activeStep; // ONLY the current step's edge is "Active"
 
             return {
                 id: e.id,
@@ -100,14 +100,15 @@ const CinematicReplayContent: React.FC<CinematicReplayProps> = ({ nodes, edges, 
                     status: 'COMMITTED',
                     isActive: isActive
                 },
-                animated: isVisible,
+                animated: isActive, // ONLY the active connection should pulse
+                className: isActive ? 'edge-active' : '',
                 style: {
-                    stroke: isActive ? '#00ff88' : isVisible ? '#3B82F6' : '#1e293b',
-                    strokeWidth: isActive ? 5 : 3,
-                    opacity: isVisible ? 1 : 0.1,
-                    transition: 'all 0.5s ease'
+                    stroke: isActive ? '#00ff88' : '#3B82F6', // Neon Green for active, Blue for established
+                    strokeWidth: isActive ? 6 : 2, // Thicker for active
+                    opacity: isVisible ? 1 : 0.05,
+                    transition: 'all 0.4s ease'
                 },
-                hidden: !isVisible
+                hidden: !isVisible && !isActive
             };
         });
 
@@ -213,6 +214,17 @@ const CinematicReplayContent: React.FC<CinematicReplayProps> = ({ nodes, edges, 
                     </div>
                 </motion.div>
             </AnimatePresence>
+
+            {/* Custom Animations */}
+            <style>{`
+        @keyframes pulse-active {
+          0%, 100% { opacity: 1; stroke-width: 6; filter: drop-shadow(0 0 15px #00ff88); }
+          50% { opacity: 0.6; stroke-width: 4; filter: drop-shadow(0 0 5px #00ff88); }
+        }
+        .edge-active {
+          animation: pulse-active 1s infinite ease-in-out;
+        }
+      `}</style>
 
             <div className="w-full h-full relative" ref={replayContainerRef}>
                 <ReactFlow
