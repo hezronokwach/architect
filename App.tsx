@@ -7,6 +7,7 @@ import DiagramCanvas from './components/DiagramCanvas';
 import ChatInterface from './components/ChatInterface';
 import { sendMessageToGemini, sendToolResponseToGemini } from './services/geminiService';
 import { generateCinematicVideo, CinematicResult } from './services/videoService';
+import CinematicReplay from './components/CinematicReplay';
 import { SystemNode, SystemEdge, ChatMessage, Proposal, Position } from './types';
 import { Play, Download, Loader2, Video, Film, Trash2, X } from 'lucide-react';
 
@@ -29,8 +30,8 @@ const App: React.FC = () => {
   const [isStreaming, setIsStreaming] = useState(false);
   const [isGeneratingVideo, setIsGeneratingVideo] = useState(false);
   const [videoStatus, setVideoStatus] = useState('');
-  const [generatedVideoUrl, setGeneratedVideoUrl] = useState<string | null>(null);
-  const [generatedNarration, setGeneratedNarration] = useState<string>('');
+  const [showCinematicReplay, setShowCinematicReplay] = useState(false);
+  const [cinematicScript, setCinematicScript] = useState<Record<string, string>>({});
   const [activeProposal, setActiveProposal] = useState<Proposal | null>(null);
   const [lastToolCallId, setLastToolCallId] = useState<string | null>(null);
   const [lastToolName, setLastToolName] = useState<string | null>(null);
@@ -187,7 +188,7 @@ const App: React.FC = () => {
     }
 
     setIsGeneratingVideo(true);
-    setVideoStatus('Capturing Diagram Canvas...');
+    setVideoStatus('Analyzing Design Sequence...');
 
     try {
       const canvas = document.querySelector('.react-flow__renderer') as HTMLElement;
@@ -196,39 +197,32 @@ const App: React.FC = () => {
         throw new Error("Canvas not found");
       }
 
-      console.log("Frontend: Capturing screenshot with html2canvas...");
-      const screenshot = await html2canvas(canvas, {
+      console.log("Frontend: Capturing snapshot for Gemini context...");
+      const snapshot = await html2canvas(canvas, {
         backgroundColor: '#0f172a',
         scale: 2,
       });
-      console.log("Frontend: Screenshot captured successfully.");
+      const base64Image = snapshot.toDataURL('image/png');
 
-      setVideoStatus('Sending to Veo Pipeline (Gemini 2.5)...');
-      const base64Image = screenshot.toDataURL('image/png');
-
-      console.log("Frontend: Calling VideoService...");
-      const result = await generateCinematicVideo(
+      const result: CinematicResult | null = await generateCinematicVideo(
         base64Image,
         JSON.stringify({ nodes, edges })
       );
 
-      if (result) {
-        console.log("Frontend: VideoService returned result.");
-        setVideoStatus('Cinematic Rendered Successfully!');
-        setGeneratedVideoUrl(result.snapshotUrl);
-        setGeneratedNarration(result.narration);
+      if (result && result.script) {
+        console.log("Frontend: VideoService returned result with script.");
+        setVideoStatus('Script Generated Successfully!');
+        setCinematicScript(result.script);
+        setShowCinematicReplay(true);
       } else {
-        console.error("Frontend: VideoService returned NULL/Empty result.");
+        console.error("Frontend: VideoService returned NULL/Empty result or no script.");
+        setVideoStatus('Failed to generate cinematic script.');
       }
-
-      setTimeout(() => {
-        console.log("Frontend: Generation flow complete. Closing Director's Monitor.");
-        setIsGeneratingVideo(false);
-      }, 2000);
     } catch (error) {
-      console.error("Frontend: Cinematic View flow FAILED:", error);
-      setVideoStatus('Error Generating Video');
-      setTimeout(() => setIsGeneratingVideo(false), 3000);
+      console.error("Frontend: Error generating cinematic video:", error);
+      setVideoStatus('Error generating cinematic video.');
+    } finally {
+      setIsGeneratingVideo(false);
     }
   };
 
@@ -285,98 +279,14 @@ const App: React.FC = () => {
           </div>
         )}
 
-        {/* Cinematic Video Result Modal */}
-        {generatedVideoUrl && (
-          <div className="absolute inset-0 z-[110] bg-slate-950/95 backdrop-blur-3xl flex flex-col items-center justify-center animate-in zoom-in duration-500">
-            <div className="max-w-5xl w-full aspect-video bg-black rounded-[2rem] overflow-hidden shadow-[0_0_120px_rgba(59,130,246,0.25)] border border-white/10 relative group">
-              {/* Ken Burns Effect Engine */}
-              <div className="absolute inset-0 overflow-hidden bg-slate-950">
-                <motion.img
-                  src={generatedVideoUrl}
-                  className="w-[120%] h-[120%] object-cover opacity-80"
-                  initial={{ x: "-10%", y: "-10%", scale: 1 }}
-                  animate={{
-                    x: ["-10%", "0%", "-5%"],
-                    y: ["-10%", "-5%", "0%"],
-                    scale: [1, 1.1, 1.05]
-                  }}
-                  transition={{
-                    duration: 20,
-                    ease: "linear",
-                    repeat: Infinity,
-                    repeatType: "reverse"
-                  }}
-                />
-
-                {/* Cinematic Overlays */}
-                <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-transparent to-slate-950/40" />
-                <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 pointer-events-none mix-blend-overlay" />
-
-                {/* Tech HUD Elements */}
-                <div className="absolute top-8 left-8 flex items-center gap-4">
-                  <div className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
-                  <div className="text-[10px] font-mono text-white/40 tracking-[0.3em] uppercase">Rec: AI_ARCHITECT_VIEW // V2.5</div>
-                </div>
-
-                {/* Narrated Subtitles */}
-                <div className="absolute inset-x-0 bottom-16 flex flex-col items-center px-12 text-center">
-                  <motion.p
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.8, duration: 1 }}
-                    className="text-2xl font-medium text-white max-w-3xl leading-relaxed tracking-tight"
-                    style={{ textShadow: '0 2px 10px rgba(0,0,0,0.5)' }}
-                  >
-                    "{generatedNarration}"
-                  </motion.p>
-                  <motion.div
-                    initial={{ width: 0 }}
-                    animate={{ width: "80px" }}
-                    transition={{ delay: 1.5, duration: 1 }}
-                    className="h-1 bg-blue-500 mt-6 rounded-full"
-                  />
-                </div>
-              </div>
-
-              <button
-                onClick={() => {
-                  setGeneratedVideoUrl(null);
-                  setGeneratedNarration('');
-                }}
-                className="absolute top-8 right-8 bg-white/10 hover:bg-white/20 backdrop-blur p-4 rounded-full text-white transition-all shadow-2xl border border-white/10 z-50 group-hover:scale-110"
-              >
-                <X size={24} />
-              </button>
-
-              <div className="absolute bottom-10 left-10 right-10 flex justify-between items-end opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none z-50">
-                <div className="space-y-1">
-                  <h4 className="text-xl font-bold text-white uppercase tracking-tighter">Director's Cut Complete</h4>
-                  <p className="text-blue-400 text-xs font-mono uppercase tracking-widest">Architectural Insight Engine • Gemini 2.5</p>
-                </div>
-                <button
-                  className="bg-blue-600 hover:bg-blue-500 text-white px-8 py-3 rounded-2xl font-bold flex items-center gap-3 transition-all shadow-2xl pointer-events-auto"
-                  onClick={() => {
-                    const link = document.createElement('a');
-                    link.href = generatedVideoUrl!;
-                    link.download = 'architect-design-cinematic.png';
-                    link.click();
-                  }}
-                >
-                  <Download size={20} /> Save Master Render
-                </button>
-              </div>
-            </div>
-
-            <button
-              onClick={() => {
-                setGeneratedVideoUrl(null);
-                setGeneratedNarration('');
-              }}
-              className="mt-12 text-slate-500 hover:text-white flex items-center gap-2 text-sm font-medium transition-colors"
-            >
-              Close Cinematic Review
-            </button>
-          </div>
+        {/* Cinematic Replay Engine Overlay */}
+        {showCinematicReplay && (
+          <CinematicReplay
+            nodes={nodes}
+            edges={edges}
+            script={cinematicScript}
+            onClose={() => setShowCinematicReplay(false)}
+          />
         )}
 
         <div className="absolute top-4 right-4 flex gap-2 z-50">

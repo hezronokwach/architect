@@ -1,5 +1,6 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import html2canvas from 'html2canvas';
 import {
     ReactFlow,
     Background,
@@ -15,7 +16,7 @@ import ArchitectNode from './ArchitectNode';
 import ArchitectEdge from './ArchitectEdge';
 import { getLayoutedElements } from '../services/layoutService';
 import { SystemNode, SystemEdge } from '../types';
-import { X, Play, RefreshCw, Layers, Zap, Info } from 'lucide-react';
+import { X, Play, Pause, RefreshCw, Layers, Zap, Download } from 'lucide-react';
 
 const nodeTypes = { architect: ArchitectNode };
 const edgeTypes = { architect: ArchitectEdge };
@@ -23,19 +24,22 @@ const edgeTypes = { architect: ArchitectEdge };
 interface CinematicReplayProps {
     nodes: SystemNode[];
     edges: SystemEdge[];
+    script: Record<string, string>;
     onClose: () => void;
 }
 
-const CinematicReplayContent: React.FC<CinematicReplayProps> = ({ nodes, edges, onClose }) => {
+const CinematicReplayContent: React.FC<CinematicReplayProps> = ({ nodes, edges, script, onClose }) => {
     const [activeStep, setActiveStep] = useState(0);
     const [isPlaying, setIsPlaying] = useState(true);
+    const [playbackSpeed, setPlaybackSpeed] = useState(1);
     const { setCenter } = useReactFlow();
+    const replayContainerRef = useRef<HTMLDivElement>(null);
 
     const [rfNodes, setRFNodes] = useNodesState([]);
     const [rfEdges, setRFEdges] = useEdgesState([]);
 
-    // Sequence based on user input (we'll treat node order as logical flow)
     const totalSteps = nodes.length + edges.length;
+    const intervalDuration = useMemo(() => 4500 / playbackSpeed, [playbackSpeed]);
 
     useEffect(() => {
         if (!isPlaying) return;
@@ -48,10 +52,10 @@ const CinematicReplayContent: React.FC<CinematicReplayProps> = ({ nodes, edges, 
                 }
                 return prev + 1;
             });
-        }, 2000); // 2 seconds per step for clarity
+        }, intervalDuration);
 
         return () => clearInterval(timer);
-    }, [isPlaying, totalSteps]);
+    }, [isPlaying, totalSteps, intervalDuration]);
 
     useEffect(() => {
         const isNodeStep = activeStep <= nodes.length && activeStep > 0;
@@ -64,7 +68,6 @@ const CinematicReplayContent: React.FC<CinematicReplayProps> = ({ nodes, edges, 
             const isVisible = idx < activeStep;
             const isActive = n.id === currentActiveNodeId;
 
-            // If we are at an edge step, highlight the source and target of that edge
             const activeEdge = isEdgeStep ? edges[activeStep - nodes.length - 1] : null;
             const isPartofActiveFlow = activeEdge && (n.id === activeEdge.fromId || n.id === activeEdge.toId);
 
@@ -75,10 +78,8 @@ const CinematicReplayContent: React.FC<CinematicReplayProps> = ({ nodes, edges, 
                 data: {
                     ...n,
                     status: 'COMMITTED',
-                    // Inject extra styling for "cinematic" focus
                     isActive: isActive || isPartofActiveFlow,
                     dimmed: activeStep > 0 && !isVisible && !isActive && !isPartofActiveFlow && activeStep <= nodes.length,
-                    narrative: isActive ? n.description : ''
                 },
                 hidden: !isVisible && !isActive && activeStep <= nodes.length
             };
@@ -99,7 +100,7 @@ const CinematicReplayContent: React.FC<CinematicReplayProps> = ({ nodes, edges, 
                     status: 'COMMITTED',
                     isActive: isActive
                 },
-                animated: isVisible, // Pulse effect
+                animated: isVisible,
                 style: {
                     stroke: isActive ? '#00ff88' : isVisible ? '#3B82F6' : '#1e293b',
                     strokeWidth: isActive ? 5 : 3,
@@ -118,89 +119,81 @@ const CinematicReplayContent: React.FC<CinematicReplayProps> = ({ nodes, edges, 
         setRFNodes(layoutedNodes);
         setRFEdges(layoutedEdges);
 
-        // Camera Focus Logic
         if (currentActiveNodeId) {
             const node = layoutedNodes.find(n => n.id === currentActiveNodeId);
             if (node) {
-                setCenter(node.position.x + 86, node.position.y + 50, { zoom: 1.2, duration: 1000 });
+                setCenter(node.position.x + 86, node.position.y + 50, { zoom: 1.3, duration: 1500 });
             }
-        } else if (currentActiveEdgeId) {
-            // Fit view to see the flow
-            // For better experience, we could find mid-point of edge
         }
     }, [activeStep, nodes, edges, setRFNodes, setRFEdges, setCenter]);
 
+    const handleDownloadSnapshot = async () => {
+        if (!replayContainerRef.current) return;
+        const canvas = replayContainerRef.current.querySelector('.react-flow__renderer') as HTMLElement;
+        if (canvas) {
+            const screenshot = await html2canvas(canvas, { backgroundColor: '#020617', scale: 2 });
+            const link = document.createElement('a');
+            link.href = screenshot.toDataURL('image/png');
+            link.download = `architect-cinematic-step-${activeStep}.png`;
+            link.click();
+        }
+    };
+
+    const currentNarration = useMemo(() => {
+        if (activeStep <= 0) return "Click play to begin the architectural walkthrough.";
+
+        if (activeStep <= nodes.length) {
+            const node = nodes[activeStep - 1];
+            if (!node) return "...";
+            return script[node.id] || `Deploying ${node.label}: ${node.description || 'Integrating core architectural component.'}`;
+        } else {
+            const edge = edges[activeStep - nodes.length - 1];
+            if (!edge) return "...";
+            const sourceNode = nodes.find(n => n.id === edge.fromId);
+            const targetNode = nodes.find(n => n.id === edge.toId);
+            const fallback = `Connecting ${sourceNode?.label || 'Primary'} to ${targetNode?.label || 'Secondary'} via ${edge.label || 'Data Path'}.`;
+            return script[edge.id] || fallback;
+        }
+    }, [activeStep, nodes, edges, script]);
+
     return (
         <div className="absolute inset-0 z-[120] bg-slate-950 flex flex-col items-center justify-center overflow-hidden">
-            {/* Dynamic Background */}
             <div className="absolute inset-0 pointer-events-none">
                 <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_50%_50%,rgba(59,130,246,0.05),transparent_80%)]" />
-                <AnimatePresence>
-                    {isPlaying && (
-                        <motion.div
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 0.1 }}
-                            exit={{ opacity: 0 }}
-                            className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] mix-blend-overlay"
-                        />
-                    )}
-                </AnimatePresence>
             </div>
 
-            {/* Narrative Overlay (Bottom) */}
             <AnimatePresence mode="wait">
-                {activeStep > 0 && activeStep <= nodes.length && nodes[activeStep - 1] && (
-                    <motion.div
-                        key={`node-${activeStep}`}
-                        initial={{ opacity: 0, y: 50 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -20 }}
-                        className="absolute bottom-16 z-50 bg-slate-900/80 backdrop-blur-2xl border border-blue-500/30 p-8 rounded-[2rem] max-w-2xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] flex flex-col items-center text-center"
-                    >
-                        <div className="flex items-center gap-3 mb-4">
-                            <div className="bg-blue-600/20 p-2 rounded-xl">
-                                <Zap className="text-blue-400 w-5 h-5 fill-blue-400" />
-                            </div>
-                            <span className="text-xs font-mono text-blue-400 tracking-[0.5em] uppercase">Phase {activeStep}: Initialization</span>
+                <motion.div
+                    key={`step-${activeStep}`}
+                    initial={{ opacity: 0, y: 50 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -20 }}
+                    className="absolute bottom-16 z-50 bg-slate-900/40 backdrop-blur-3xl border border-white/10 p-10 rounded-[2.5rem] w-full max-w-3xl shadow-[0_40px_100px_rgba(0,0,0,0.8)] flex flex-col items-center text-center"
+                >
+                    <div className="flex items-center gap-3 mb-5">
+                        <div className="bg-blue-600/20 p-2.5 rounded-2xl">
+                            <Zap className="text-blue-400 w-6 h-6 fill-blue-400" />
                         </div>
-                        <h3 className="text-3xl font-black text-white mb-2 tracking-tight uppercase">
-                            {nodes[activeStep - 1].label}
-                        </h3>
-                        <p className="text-slate-300 text-lg leading-relaxed font-medium">
-                            {nodes[activeStep - 1].description}
-                        </p>
-                    </motion.div>
-                )}
-
-                {activeStep > nodes.length && edges[activeStep - nodes.length - 1] && (
-                    <motion.div
-                        key={`edge-${activeStep}`}
-                        initial={{ opacity: 0, y: 50 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -20 }}
-                        className="absolute bottom-16 z-50 bg-green-950/40 backdrop-blur-2xl border border-green-500/30 p-8 rounded-[2rem] max-w-2xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] flex flex-col items-center text-center"
-                    >
-                        <div className="flex items-center gap-3 mb-4">
-                            <div className="bg-green-600/20 p-2 rounded-xl">
-                                <RefreshCw className="text-green-400 w-5 h-5 animate-spin-slow" />
-                            </div>
-                            <span className="text-xs font-mono text-green-400 tracking-[0.5em] uppercase">Data Transaction</span>
-                        </div>
-                        <h3 className="text-3xl font-black text-white mb-2 tracking-tight uppercase">
-                            Establishing Flow
-                        </h3>
-                        <p className="text-slate-200 text-lg leading-relaxed font-bold italic">
-                            « {edges[activeStep - nodes.length - 1].label} »
-                        </p>
-                        <p className="text-slate-400 text-sm mt-4 max-w-lg">
-                            Integrating data paths between identified architectural modules to ensure seamless communication and low-latency throughput.
-                        </p>
-                    </motion.div>
-                )}
+                        <span className="text-[11px] font-mono text-blue-400 tracking-[0.6em] uppercase">
+                            Phase {activeStep}: {activeStep <= nodes.length ? 'System Node' : 'Network Flow'}
+                        </span>
+                    </div>
+                    <p className="text-2xl font-bold text-white leading-relaxed tracking-tight max-w-2xl italic">
+                        "{currentNarration}"
+                    </p>
+                    <div className="w-full h-1 bg-slate-800 mt-8 rounded-full overflow-hidden">
+                        <motion.div
+                            key={`progress-bar-${activeStep}-${playbackSpeed}`}
+                            initial={{ scaleX: 0 }}
+                            animate={{ scaleX: 1 }}
+                            transition={{ duration: intervalDuration / 1000, ease: "linear" }}
+                            className="h-full bg-blue-500 origin-left"
+                        />
+                    </div>
+                </motion.div>
             </AnimatePresence>
 
-            {/* Stage Area */}
-            <div className="w-full h-full relative">
+            <div className="w-full h-full relative" ref={replayContainerRef}>
                 <ReactFlow
                     nodes={rfNodes}
                     edges={rfEdges}
@@ -217,43 +210,67 @@ const CinematicReplayContent: React.FC<CinematicReplayProps> = ({ nodes, edges, 
                     minZoom={0.5}
                     maxZoom={2}
                 >
-                    <Background color="#1e293b" variant="lines" gap={40} size={1} opacity={0.2} />
+                    <Background color="#111827" variant="lines" gap={50} size={1} opacity={0.3} />
                 </ReactFlow>
 
-                {/* HUD Controls */}
-                <div className="absolute top-8 right-8 flex items-center gap-3 z-50">
+                <div className="absolute top-10 right-10 flex items-center gap-3 z-50">
+                    <div className="bg-slate-900 border border-white/10 p-1.5 rounded-[1.5rem] flex gap-1 shadow-2xl">
+                        {[0.5, 1, 2].map(speed => (
+                            <button
+                                key={speed}
+                                onClick={() => setPlaybackSpeed(speed)}
+                                className={`px-3 py-2 rounded-xl text-[10px] font-black transition-all ${playbackSpeed === speed ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-white'}`}
+                            >
+                                {speed}x
+                            </button>
+                        ))}
+                    </div>
+
+                    <button
+                        onClick={() => setIsPlaying(!isPlaying)}
+                        className="flex items-center gap-2 bg-slate-900 border border-white/10 px-5 py-3.5 rounded-[1.5rem] text-xs font-black text-white hover:bg-slate-800 transition-all shadow-2xl active:scale-95"
+                    >
+                        {isPlaying ? <Pause size={16} fill="currentColor" /> : <Play size={16} fill="currentColor" />}
+                        {isPlaying ? 'PAUSE' : 'RESUME'}
+                    </button>
+
+                    <button
+                        onClick={handleDownloadSnapshot}
+                        className="bg-blue-600 hover:bg-blue-500 text-white p-3.5 rounded-[1.5rem] shadow-2xl transition-all active:scale-95"
+                        title="Download Step Snapshot"
+                    >
+                        <Download size={20} />
+                    </button>
+
                     <button
                         onClick={() => { setActiveStep(0); setIsPlaying(true); }}
-                        className="flex items-center gap-2 bg-slate-900 border border-white/10 px-5 py-3 rounded-2xl text-sm font-bold text-white hover:bg-slate-800 transition-all shadow-xl"
+                        className="bg-slate-900 border border-white/10 text-white p-3.5 rounded-[1.5rem] shadow-2xl hover:bg-slate-800 transition-all active:scale-95"
                     >
-                        <RefreshCw size={18} className={isPlaying ? 'animate-spin' : ''} /> RESTART
+                        <RefreshCw size={20} className={isPlaying ? 'animate-spin-slow' : ''} />
                     </button>
+
                     <button
                         onClick={onClose}
-                        className="bg-red-600 hover:bg-red-500 text-white p-3 rounded-2xl shadow-xl transition-all"
+                        className="bg-red-600/20 hover:bg-red-600 border border-red-500/50 text-white p-4 rounded-[1.5rem] shadow-2xl transition-all"
                     >
                         <X size={24} />
                     </button>
                 </div>
 
-                {/* Progress HUD */}
-                <div className="absolute top-8 left-8 z-50 flex flex-col gap-1">
-                    <div className="text-[10px] font-mono text-white/30 uppercase tracking-[0.4em] mb-2">Sequence Analysis Matrix</div>
-                    <div className="flex gap-1.5">
+                <div className="absolute top-10 left-10 z-50">
+                    <div className="text-[10px] font-mono text-white/20 uppercase tracking-[0.5em] mb-4">Reconstruction Protocol</div>
+                    <div className="flex gap-2">
                         {Array.from({ length: totalSteps }).map((_, i) => (
                             <motion.div
                                 key={i}
-                                initial={false}
                                 animate={{
-                                    width: i === activeStep - 1 ? 40 : 12,
+                                    height: i === activeStep - 1 ? 24 : 8,
+                                    width: 8,
                                     backgroundColor: i < activeStep ? '#3b82f6' : '#1e293b'
                                 }}
-                                className="h-1.5 rounded-full transition-all"
+                                className="rounded-full transition-all"
                             />
                         ))}
-                    </div>
-                    <div className="mt-4 flex items-center gap-2 text-blue-400 font-mono text-[10px] uppercase">
-                        <Info size={12} /> Step {activeStep} of {totalSteps} // System Integrity Verified
                     </div>
                 </div>
             </div>

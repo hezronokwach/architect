@@ -2,57 +2,61 @@ import { GoogleGenAI } from "@google/genai";
 
 export interface CinematicResult {
     snapshotUrl: string;
-    narration: string;
+    script: Record<string, string>; // Maps node/edge ID to a 1-sentence architectural insight
 }
 
 export const generateCinematicVideo = async (screenshotBase64: string, diagramJson: string): Promise<CinematicResult> => {
-    console.log("VideoService: Starting True Cinematic Generation...");
+    console.log("VideoService: Generating Director's Script...");
 
     const apiKey = import.meta.env.VITE_GEMINI_API_KEY || '';
-    if (!apiKey) {
-        throw new Error("Missing VITE_GEMINI_API_KEY");
-    }
+    if (!apiKey) throw new Error("Missing VITE_GEMINI_API_KEY");
 
     const ai = new GoogleGenAI({ apiKey });
 
-    // Ask Gemini for a cinematic "Executive Pitch" of this architecture
     const prompt = `
-    Observe this software architecture diagram and the provided JSON metadata.
-    Act as a Lead System Architect. Provide a 2-3 sentence "Cinematic Overview" 
-    of this system that sounds visionary and technical. 
+    Act as a Lead System Architect narrating a high-end technical walkthrough for a CEO.
+    Analyze this architecture (JSON provided) and write a "Director's Script".
     
-    METADATA:
+    For EVERY node provide a 1-sentence profound architectural insight.
+    For EVERY edge, explain WHY the connection exists and WHAT data moves through it.
+    
+    CONSTRAINTS:
+    - NEVER start a sentence with "Connecting...", "Establishing...", or "This connection...".
+    - Start directly with the action or value (e.g., "The Student User initiates HTTPS requests to the Load Balancer to begin the authentication handshake").
+    - Maximum one punchy sentence per item.
+    - Focus on the technical REALITY of the interaction.
+    
+    DIAGRAM DATA:
     ${diagramJson}
 
-    FORMAT: Tone should be professional, visionary, and technical.
+    OUTPUT FORMAT:
+    Return ONLY a JSON object where keys are the IDs and values are the 1-sentence insights.
   `;
 
-    const imagePart = {
-        inlineData: {
-            data: screenshotBase64.split(',')[1],
-            mimeType: "image/png"
-        }
-    };
-
     try {
-        console.log("VideoService: Requesting Architect Narration from Gemini...");
         const response = await ai.models.generateContent({
             model: "gemini-2.5-flash",
-            contents: [{ role: 'user', parts: [{ text: prompt }, imagePart] }]
+            contents: [{
+                role: 'user',
+                parts: [{ text: prompt }]
+            }],
+            generationConfig: { responseMimeType: "application/json" }
         });
 
-        const narration = response.candidates?.[0]?.content?.parts?.[0]?.text || "A sophisticated distributed architecture designed for scale and reliability.";
-        console.log("VideoService: Narration Generated:", narration);
+        const scriptText = response.candidates?.[0]?.content?.parts?.[0]?.text || "{}";
+        const script = JSON.parse(scriptText);
 
-        // Simulate a small "rendering" delay
-        await new Promise(resolve => setTimeout(resolve, 1500));
+        console.log("VideoService: Script generated for", Object.keys(script).length, "elements.");
 
         return {
             snapshotUrl: screenshotBase64,
-            narration: narration
+            script: script
         };
     } catch (error) {
-        console.error("VideoService: ERROR:", error);
-        throw error;
+        console.error("VideoService: Script Generation ERROR:", error);
+        return {
+            snapshotUrl: screenshotBase64,
+            script: {} // Fallback to empty script
+        };
     }
 };
