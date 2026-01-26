@@ -14,9 +14,9 @@ async function withRetry<T>(fn: () => Promise<T>, maxRetries: number = 3): Promi
       return await fn();
     } catch (error: any) {
       lastError = error;
-      const isRetryable = 
-        error?.message?.includes('503') || 
-        error?.message?.includes('overloaded') || 
+      const isRetryable =
+        error?.message?.includes('503') ||
+        error?.message?.includes('overloaded') ||
         error?.message?.includes('429') ||
         error?.message?.includes('Resource has been exhausted');
 
@@ -35,12 +35,12 @@ async function withRetry<T>(fn: () => Promise<T>, maxRetries: number = 3): Promi
 export const initializeGeminiChat = (): Chat => {
   // Use process.env.API_KEY directly as required by guidelines
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-  
+
   chatSession = ai.chats.create({
-    model: 'gemini-3-pro-preview',
+    model: 'gemini-3-flash',
     config: {
       systemInstruction: SYSTEM_INSTRUCTION,
-      temperature: 0.7,
+      temperature: 0.5,
       tools: TOOLS,
     },
   });
@@ -49,21 +49,21 @@ export const initializeGeminiChat = (): Chat => {
 };
 
 export const sendMessageToGemini = async (
-  message: string, 
+  message: string,
   currentContext: string
 ): Promise<GenerateContentResponse> => {
   if (!chatSession) {
     initializeGeminiChat();
   }
-  
+
   const fullMessage = `[CURRENT DIAGRAM STATE: ${currentContext}] \n\n User Request: ${message}`;
-  
+
   return await withRetry(() => chatSession!.sendMessage({ message: fullMessage }));
 };
 
 export const sendToolResponseToGemini = async (
-  toolName: string, 
-  toolCallId: string, 
+  toolName: string,
+  toolCallId: string,
   status: string
 ): Promise<GenerateContentResponse> => {
   if (!chatSession) {
@@ -71,6 +71,6 @@ export const sendToolResponseToGemini = async (
   }
 
   const feedbackMessage = `The user has ${status} your proposal for "${toolName}" (ID: ${toolCallId}). Please continue the design based on this decision.`;
-  
+
   return await withRetry(() => chatSession!.sendMessage({ message: feedbackMessage }));
 };
