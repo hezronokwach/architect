@@ -151,7 +151,12 @@ const CinematicReplayContent: React.FC<CinematicReplayProps> = ({ nodes, edges, 
             if (!edge) return "...";
             const sourceNode = nodes.find(n => n.id === edge.fromId);
             const targetNode = nodes.find(n => n.id === edge.toId);
-            const fallback = `Connecting ${sourceNode?.label || 'Primary'} to ${targetNode?.label || 'Secondary'} via ${edge.label || 'Data Path'}.`;
+
+            const flowDesc = edge.label
+                ? `transmitting ${edge.label}`
+                : `facilitating critical data exchange`;
+
+            const fallback = `${sourceNode?.label || 'Source'} interfaces with ${targetNode?.label || 'Target'}, ${flowDesc} to synchronize system state.`;
             return script[edge.id] || fallback;
         }
     }, [activeStep, nodes, edges, script]);
