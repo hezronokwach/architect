@@ -33,8 +33,14 @@ async function withRetry<T>(fn: () => Promise<T>, maxRetries: number = 3): Promi
 }
 
 export const initializeGeminiChat = (): Chat => {
-  // Use process.env.API_KEY directly as required by guidelines
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  const apiKey = import.meta.env.VITE_GEMINI_API_KEY || '';
+  console.log("Initializing Gemini Chat. Key present:", !!apiKey);
+
+  if (!apiKey) {
+    console.error("VITE_GEMINI_API_KEY is missing! Check your .env file.");
+  }
+
+  const ai = new GoogleGenAI({ apiKey });
 
   chatSession = ai.chats.create({
     model: 'gemini-2.5-flash',
