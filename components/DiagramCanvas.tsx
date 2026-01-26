@@ -81,8 +81,8 @@ const DiagramCanvasContent: React.FC<DiagramCanvasProps> = ({
       formattedEdges
     );
 
-    setRFNodes([...layoutedNodes]);
-    setRFEdges([...layoutedEdges]);
+    setRFNodes(layoutedNodes);
+    setRFEdges(layoutedEdges);
   }, [systemNodes, systemEdges, proposedNode, proposedEdge, setRFNodes, setRFEdges]);
 
   return (
