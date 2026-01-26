@@ -32,6 +32,7 @@ const App: React.FC = () => {
   const [videoStatus, setVideoStatus] = useState('');
   const [showCinematicReplay, setShowCinematicReplay] = useState(false);
   const [cinematicScript, setCinematicScript] = useState<Record<string, string>>({});
+  const [veoPrompt, setVeoPrompt] = useState<string>('');
   const [activeProposal, setActiveProposal] = useState<Proposal | null>(null);
   const [lastToolCallId, setLastToolCallId] = useState<string | null>(null);
   const [lastToolName, setLastToolName] = useState<string | null>(null);
@@ -212,8 +213,9 @@ const App: React.FC = () => {
 
       if (result && result.script) {
         console.log("Frontend: VideoService returned result with script.");
-        setVideoStatus('Script Generated Successfully!');
+        setVideoStatus('Cinematic Protocol Ready!');
         setCinematicScript(result.script);
+        setVeoPrompt(result.veoPrompt || '');
         setShowCinematicReplay(true);
       } else {
         console.error("Frontend: VideoService returned NULL/Empty result or no script.");
@@ -286,6 +288,7 @@ const App: React.FC = () => {
             nodes={nodes}
             edges={edges}
             script={cinematicScript}
+            veoPrompt={veoPrompt}
             onClose={() => setShowCinematicReplay(false)}
           />
         )}

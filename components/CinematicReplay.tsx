@@ -16,7 +16,7 @@ import ArchitectNode from './ArchitectNode';
 import ArchitectEdge from './ArchitectEdge';
 import { getLayoutedElements } from '../services/layoutService';
 import { SystemNode, SystemEdge } from '../types';
-import { X, Play, Pause, RefreshCw, Layers, Zap, Download } from 'lucide-react';
+import { X, Play, Pause, RefreshCw, Layers, Zap, Download, Box, Video } from 'lucide-react';
 
 const nodeTypes = { architect: ArchitectNode };
 const edgeTypes = { architect: ArchitectEdge };
@@ -25,13 +25,15 @@ interface CinematicReplayProps {
     nodes: SystemNode[];
     edges: SystemEdge[];
     script: Record<string, string>;
+    veoPrompt?: string;
     onClose: () => void;
 }
 
-const CinematicReplayContent: React.FC<CinematicReplayProps> = ({ nodes, edges, script, onClose }) => {
+const CinematicReplayContent: React.FC<CinematicReplayProps> = ({ nodes, edges, script, veoPrompt, onClose }) => {
     const [activeStep, setActiveStep] = useState(0);
     const [isPlaying, setIsPlaying] = useState(true);
     const [playbackSpeed, setPlaybackSpeed] = useState(1);
+    const [is3DMode, setIs3DMode] = useState(true);
     const { setCenter } = useReactFlow();
     const replayContainerRef = useRef<HTMLDivElement>(null);
 
@@ -88,7 +90,7 @@ const CinematicReplayContent: React.FC<CinematicReplayProps> = ({ nodes, edges, 
         const formattedEdges: Edge[] = edges.map((e, idx) => {
             const edgeIdx = idx + nodes.length + 1;
             const isVisible = edgeIdx <= activeStep;
-            const isActive = edgeIdx === activeStep; // ONLY the current step's edge is "Active"
+            const isActive = edgeIdx === activeStep;
 
             return {
                 id: e.id,
@@ -100,11 +102,11 @@ const CinematicReplayContent: React.FC<CinematicReplayProps> = ({ nodes, edges, 
                     status: 'COMMITTED',
                     isActive: isActive
                 },
-                animated: isActive, // ONLY the active connection should pulse
+                animated: isActive,
                 className: isActive ? 'edge-active' : '',
                 style: {
-                    stroke: isActive ? '#00ff88' : '#3B82F6', // Neon Green for active, Blue for established
-                    strokeWidth: isActive ? 6 : 2, // Thicker for active
+                    stroke: isActive ? '#00ff88' : '#3B82F6',
+                    strokeWidth: isActive ? 6 : 2,
                     opacity: isVisible ? 1 : 0.05,
                     transition: 'all 0.4s ease'
                 },
@@ -158,7 +160,6 @@ const CinematicReplayContent: React.FC<CinematicReplayProps> = ({ nodes, edges, 
             const sourceName = sourceNode?.label || 'Primary component';
             const targetName = targetNode?.label || 'Target module';
 
-            // Context-aware "Why/What" logic
             let fallback = "";
             const flowDescription = edge.label ? `transmitting ${edge.label.toLowerCase()}` : "handling traffic";
 
@@ -180,17 +181,62 @@ const CinematicReplayContent: React.FC<CinematicReplayProps> = ({ nodes, edges, 
 
     return (
         <div className="absolute inset-0 z-[120] bg-slate-950 flex flex-col items-center justify-center overflow-hidden">
+            <style>{`
+        @keyframes pulse-active {
+          0%, 100% { opacity: 1; stroke-width: 6; filter: drop-shadow(0 0 15px #00ff88); }
+          50% { opacity: 0.6; stroke-width: 4; filter: drop-shadow(0 0 5px #00ff88); }
+        }
+        .edge-active {
+          animation: pulse-active 1s infinite ease-in-out;
+        }
+        .perspective-container {
+          perspective: 1500px;
+          transform-style: preserve-3d;
+        }
+        .canvas-3d {
+          transform: rotateX(25deg) rotateY(-5deg) rotateZ(0deg) translateY(-5%);
+          box-shadow: 0 50px 100px rgba(0,0,0,0.8), 0 0 50px rgba(59,130,246,0.1);
+          transition: transform 1s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .canvas-2d {
+          transform: rotateX(0deg) rotateY(0deg) rotateZ(0deg) translateY(0%);
+          transition: transform 1s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+      `}</style>
+
+            {/* Dynamic Background */}
             <div className="absolute inset-0 pointer-events-none">
-                <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_50%_50%,rgba(59,130,246,0.05),transparent_80%)]" />
+                <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_50%_50%,rgba(59,130,246,0.08),transparent_80%)]" />
+                <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-10 mix-blend-overlay" />
             </div>
 
+            {/* Veo Vision HUD (Top Left) */}
+            {veoPrompt && (
+                <motion.div
+                    initial={{ opacity: 0, x: -30 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    className="absolute top-32 left-10 z-[60] max-w-xs pointer-events-none"
+                >
+                    <div className="bg-blue-600/10 backdrop-blur-md border-l-2 border-blue-500 p-4 rounded-r-lg">
+                        <div className="flex items-center gap-2 mb-2">
+                            <Video size={12} className="text-blue-400" />
+                            <span className="text-[10px] font-mono text-blue-400 uppercase tracking-widest">AI Visualization Dream</span>
+                        </div>
+                        <p className="text-[11px] text-slate-300 italic leading-relaxed">
+                            "{veoPrompt}"
+                        </p>
+                    </div>
+                </motion.div>
+            )}
+
+            {/* Narrative HUD (Bottom) */}
             <AnimatePresence mode="wait">
                 <motion.div
                     key={`step-${activeStep}`}
                     initial={{ opacity: 0, y: 50 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -20 }}
-                    className="absolute bottom-16 z-50 bg-slate-900/40 backdrop-blur-3xl border border-white/10 p-10 rounded-[2.5rem] w-full max-w-3xl shadow-[0_40px_100px_rgba(0,0,0,0.8)] flex flex-col items-center text-center"
+                    className="absolute bottom-12 z-50 bg-slate-900/60 backdrop-blur-3xl border border-white/10 p-10 rounded-[2.5rem] w-full max-w-4xl shadow-[0_40px_100px_rgba(0,0,0,0.8)] flex flex-col items-center text-center"
                 >
                     <div className="flex items-center gap-3 mb-5">
                         <div className="bg-blue-600/20 p-2.5 rounded-2xl">
@@ -200,7 +246,7 @@ const CinematicReplayContent: React.FC<CinematicReplayProps> = ({ nodes, edges, 
                             Phase {activeStep}: {activeStep <= nodes.length ? 'System Node' : 'Network Flow'}
                         </span>
                     </div>
-                    <p className="text-2xl font-bold text-white leading-relaxed tracking-tight max-w-2xl italic">
+                    <p className="text-2xl font-bold text-white leading-relaxed tracking-tight max-w-3xl italic">
                         "{currentNarration}"
                     </p>
                     <div className="w-full h-1 bg-slate-800 mt-8 rounded-full overflow-hidden">
@@ -215,38 +261,40 @@ const CinematicReplayContent: React.FC<CinematicReplayProps> = ({ nodes, edges, 
                 </motion.div>
             </AnimatePresence>
 
-            {/* Custom Animations */}
-            <style>{`
-        @keyframes pulse-active {
-          0%, 100% { opacity: 1; stroke-width: 6; filter: drop-shadow(0 0 15px #00ff88); }
-          50% { opacity: 0.6; stroke-width: 4; filter: drop-shadow(0 0 5px #00ff88); }
-        }
-        .edge-active {
-          animation: pulse-active 1s infinite ease-in-out;
-        }
-      `}</style>
+            <div
+                className={`w-full h-full relative perspective-container flex items-center justify-center`}
+                ref={replayContainerRef}
+            >
+                <div className={`w-[90%] h-[80%] rounded-[3rem] overflow-hidden border border-white/10 ${is3DMode ? 'canvas-3d' : 'canvas-2d'}`}>
+                    <ReactFlow
+                        nodes={rfNodes}
+                        edges={rfEdges}
+                        nodeTypes={nodeTypes}
+                        edgeTypes={edgeTypes}
+                        fitView
+                        fitViewOptions={{ padding: 0.5 }}
+                        className="bg-slate-950"
+                        nodesDraggable={false}
+                        nodesConnectable={false}
+                        elementsSelectable={false}
+                        zoomOnScroll={false}
+                        panOnDrag={true}
+                        minZoom={0.5}
+                        maxZoom={2}
+                    >
+                        <Background color="#1e293b" variant="lines" gap={60} size={1} opacity={0.4} />
+                    </ReactFlow>
+                </div>
 
-            <div className="w-full h-full relative" ref={replayContainerRef}>
-                <ReactFlow
-                    nodes={rfNodes}
-                    edges={rfEdges}
-                    nodeTypes={nodeTypes}
-                    edgeTypes={edgeTypes}
-                    fitView
-                    fitViewOptions={{ padding: 0.5 }}
-                    className="bg-transparent"
-                    nodesDraggable={false}
-                    nodesConnectable={false}
-                    elementsSelectable={false}
-                    zoomOnScroll={false}
-                    panOnDrag={true}
-                    minZoom={0.5}
-                    maxZoom={2}
-                >
-                    <Background color="#111827" variant="lines" gap={50} size={1} opacity={0.3} />
-                </ReactFlow>
+                {/* HUD Controls */}
+                <div className="absolute top-10 right-10 flex items-center gap-3 z-[100]">
+                    <button
+                        onClick={() => setIs3DMode(!is3DMode)}
+                        className={`flex items-center gap-2 border px-5 py-3.5 rounded-[1.5rem] text-xs font-black transition-all shadow-2xl active:scale-95 ${is3DMode ? 'bg-blue-600 border-blue-400 text-white' : 'bg-slate-900 border-white/10 text-slate-400'}`}
+                    >
+                        <Box size={16} /> {is3DMode ? '3D VIEW' : '2D VIEW'}
+                    </button>
 
-                <div className="absolute top-10 right-10 flex items-center gap-3 z-50">
                     <div className="bg-slate-900 border border-white/10 p-1.5 rounded-[1.5rem] flex gap-1 shadow-2xl">
                         {[0.5, 1, 2].map(speed => (
                             <button
@@ -261,7 +309,7 @@ const CinematicReplayContent: React.FC<CinematicReplayProps> = ({ nodes, edges, 
 
                     <button
                         onClick={() => setIsPlaying(!isPlaying)}
-                        className="flex items-center gap-2 bg-slate-900 border border-white/10 px-5 py-3.5 rounded-[1.5rem] text-xs font-black text-white hover:bg-slate-800 transition-all shadow-2xl active:scale-95"
+                        className="flex items-center gap-2 bg-slate-900 border border-white/10 px-6 py-3.5 rounded-[1.5rem] text-xs font-black text-white hover:bg-slate-800 transition-all shadow-2xl active:scale-95"
                     >
                         {isPlaying ? <Pause size={16} fill="currentColor" /> : <Play size={16} fill="currentColor" />}
                         {isPlaying ? 'PAUSE' : 'RESUME'}
@@ -270,7 +318,6 @@ const CinematicReplayContent: React.FC<CinematicReplayProps> = ({ nodes, edges, 
                     <button
                         onClick={handleDownloadSnapshot}
                         className="bg-blue-600 hover:bg-blue-500 text-white p-3.5 rounded-[1.5rem] shadow-2xl transition-all active:scale-95"
-                        title="Download Step Snapshot"
                     >
                         <Download size={20} />
                     </button>
@@ -284,13 +331,14 @@ const CinematicReplayContent: React.FC<CinematicReplayProps> = ({ nodes, edges, 
 
                     <button
                         onClick={onClose}
-                        className="bg-red-600/20 hover:bg-red-600 border border-red-500/50 text-white p-4 rounded-[1.5rem] shadow-2xl transition-all"
+                        className="bg-red-600/20 hover:bg-red-600 border border-red-500/50 text-white p-3.5 rounded-[1.5rem] shadow-2xl transition-all"
                     >
-                        <X size={24} />
+                        <X size={20} />
                     </button>
                 </div>
 
-                <div className="absolute top-10 left-10 z-50">
+                {/* Step Progress HUD */}
+                <div className="absolute top-10 left-10 z-[100]">
                     <div className="text-[10px] font-mono text-white/20 uppercase tracking-[0.5em] mb-4">Reconstruction Protocol</div>
                     <div className="flex gap-2">
                         {Array.from({ length: totalSteps }).map((_, i) => (
