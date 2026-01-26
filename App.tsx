@@ -52,7 +52,13 @@ const App: React.FC = () => {
         const args = call.args as any;
         setActiveProposal({
           type: 'connection',
-          data: { ...args, id: generateId(), status: 'PROPOSED' }
+          data: {
+            id: generateId(),
+            fromId: args.from_id,
+            toId: args.to_id,
+            label: args.label,
+            status: 'PROPOSED'
+          }
         });
       }
     }
