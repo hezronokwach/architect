@@ -1,0 +1,5 @@
+{
+  "name": "ArchitectAI - System Designer",
+  "description": "A YouTube-style system design chatbot powered by Gemini 3 and Veo concepts. Features step-by-step interactive diagram building.",
+  "requestFramePermissions": []
+}
