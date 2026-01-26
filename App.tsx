@@ -206,7 +206,8 @@ const App: React.FC = () => {
 
       const result: CinematicResult | null = await generateCinematicVideo(
         base64Image,
-        JSON.stringify({ nodes, edges })
+        nodes,
+        edges
       );
 
       if (result && result.script) {

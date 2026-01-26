@@ -145,18 +145,34 @@ const CinematicReplayContent: React.FC<CinematicReplayProps> = ({ nodes, edges, 
         if (activeStep <= nodes.length) {
             const node = nodes[activeStep - 1];
             if (!node) return "...";
-            return script[node.id] || `Deploying ${node.label}: ${node.description || 'Integrating core architectural component.'}`;
+            const nodeFallback = node.description
+                ? `${node.label} serves as a ${node.description.toLowerCase()}`
+                : `Initializing ${node.label} as a core ${node.type} component within the system architecture.`;
+            return script[node.id] || nodeFallback;
         } else {
             const edge = edges[activeStep - nodes.length - 1];
             if (!edge) return "...";
             const sourceNode = nodes.find(n => n.id === edge.fromId);
             const targetNode = nodes.find(n => n.id === edge.toId);
+            const sourceName = sourceNode?.label || 'Primary component';
+            const targetName = targetNode?.label || 'Target module';
 
-            const flowDesc = edge.label
-                ? `transmitting ${edge.label}`
-                : `facilitating critical data exchange`;
+            // Context-aware "Why/What" logic
+            let fallback = "";
+            const flowDescription = edge.label ? `transmitting ${edge.label.toLowerCase()}` : "handling traffic";
 
-            const fallback = `${sourceNode?.label || 'Source'} interfaces with ${targetNode?.label || 'Target'}, ${flowDesc} to synchronize system state.`;
+            if (targetNode?.type === 'cache') {
+                fallback = `${sourceName} leverages high-speed caching on ${targetName} to reduce latency and database overhead.`;
+            } else if (targetNode?.type === 'database') {
+                fallback = `${sourceName} persists specific system state to ${targetName} ensuring data durability and integrity.`;
+            } else if (targetNode?.type === 'gateway' || targetNode?.type === 'server') {
+                fallback = `${sourceName} routes ${flowDescription} to ${targetName} for centralized request processing.`;
+            } else if (sourceNode?.type === 'client') {
+                fallback = `${sourceName} initiates safe ${flowDescription} requests to ${targetName} to begin the user session.`;
+            } else {
+                fallback = `${sourceName} exchanges data with ${targetName}, ${flowDescription} across the network fabric.`;
+            }
+
             return script[edge.id] || fallback;
         }
     }, [activeStep, nodes, edges, script]);
