@@ -20,6 +20,8 @@ const getNodeIcon = (type: string) => {
 const ArchitectNode = ({ data }: NodeProps) => {
     const isGhost = data.status === 'PROPOSED';
     const type = data.type as NodeType;
+    const isActive = !!data.isActive;
+    const isDimmed = !!data.dimmed;
 
     return (
         <div className="relative group">
@@ -28,15 +30,18 @@ const ArchitectNode = ({ data }: NodeProps) => {
             <motion.div
                 initial={{ scale: 0.8, opacity: 0, filter: "blur(5px)" }}
                 animate={{
-                    scale: 1,
-                    opacity: isGhost ? 0.6 : 1,
-                    filter: "blur(0px)",
+                    scale: isActive ? 1.15 : 1,
+                    opacity: isDimmed ? 0.3 : (isGhost ? 0.6 : 1),
+                    filter: isDimmed ? "blur(2px)" : "blur(0px)",
+                    boxShadow: isActive ? "0 0 50px rgba(59,130,246,0.6)" : "0 0 20px rgba(0,0,0,0.2)"
                 }}
                 transition={{ type: "spring", stiffness: 260, damping: 20 }}
                 className={`w-40 p-3 rounded-xl backdrop-blur-xl flex flex-col items-center gap-1 border-2 transition-all duration-300
-          ${isGhost
-                        ? 'border-dashed border-yellow-400/50 bg-yellow-400/5 shadow-[0_0_15px_rgba(250,204,21,0.1)]'
-                        : 'border-blue-500/30 bg-slate-800/80 shadow-[0_0_30px_rgba(59,130,246,0.15)] group-hover:border-blue-400/50 group-hover:shadow-[0_0_40px_rgba(59,130,246,0.3)]'
+          ${isActive
+                        ? 'border-blue-400 bg-blue-600/20'
+                        : isGhost
+                            ? 'border-dashed border-yellow-400/50 bg-yellow-400/5 shadow-[0_0_15px_rgba(250,204,21,0.1)]'
+                            : 'border-blue-500/30 bg-slate-800/80 shadow-[0_0_30px_rgba(59,130,246,0.15)] group-hover:border-blue-400/50'
                     }`}
             >
                 <div className={`p-2.5 rounded-2xl transition-all duration-500 ${isGhost ? 'bg-yellow-400/10' : 'bg-slate-900 shadow-inner group-hover:scale-110'}`}>
@@ -47,9 +52,19 @@ const ArchitectNode = ({ data }: NodeProps) => {
                     <span className="text-[13px] font-bold text-white tracking-wide text-center">
                         {data.label as string}
                     </span>
-                    <span className="text-[9px] text-slate-400 text-center leading-tight line-clamp-2 px-1 opacity-80 group-hover:opacity-100 transition-opacity">
-                        {data.description as string}
-                    </span>
+                    {isActive ? (
+                        <motion.span
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            className="text-[9px] text-blue-300 font-bold uppercase tracking-widest mt-1"
+                        >
+                            • Active Node •
+                        </motion.span>
+                    ) : (
+                        <span className="text-[9px] text-slate-400 text-center leading-tight line-clamp-2 px-1 opacity-80 group-hover:opacity-100 transition-opacity">
+                            {data.description as string}
+                        </span>
+                    )}
                 </div>
 
                 {!isGhost && (
