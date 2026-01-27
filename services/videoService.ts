@@ -4,6 +4,7 @@ import { SystemNode, SystemEdge } from "../types";
 export interface CinematicResult {
     snapshotUrl: string;
     script: Record<string, string>; // Maps node/edge ID to a 1-sentence architectural insight
+    veoPrompt?: string; // The visionary prompt for cinematic video generation
 }
 
 export const generateCinematicVideo = async (
@@ -28,9 +29,9 @@ export const generateCinematicVideo = async (
     REQUIRED IDs TO NARRATE:
     ${allIds.join(', ')}
 
-    For EVERY ID listed above, provide a 1-sentence profound architectural insight.
-    - Nodes: Explain its ROLE and STRATEGIC IMPACT.
-    - Edges: Explain WHY it exists and WHAT EXACT DATA flows through it (e.g., "The API Gateway propagates authenticated JWT tokens to the microservices layer").
+    TASKS:
+    1. For EVERY ID listed above, provide a 1-sentence profound architectural insight.
+    2. Provide a "veoPrompt": A visionary 2-sentence description of how this architecture would look as a cinematic 3D movie (e.g., "A sprawling data metropolis with neon pulses traveling through crystalline glass fibers...").
     
     CONSTRAINTS:
     - NEVER start with "Connecting...", "Establishing...", or "This connection...".
@@ -41,7 +42,7 @@ export const generateCinematicVideo = async (
     ${diagramJson}
 
     OUTPUT FORMAT:
-    Return ONLY a JSON object where keys are the IDs and values are the 1-sentence insights.
+    Return ONLY a JSON object with two keys: "script" (the ID mapping) and "veoPrompt" (the movie description).
   `;
 
     try {
@@ -51,23 +52,26 @@ export const generateCinematicVideo = async (
                 role: 'user',
                 parts: [{ text: prompt }]
             }],
-            generationConfig: { responseMimeType: "application/json" }
+            config: { responseMimeType: "application/json" }
         });
 
-        const scriptText = response.candidates?.[0]?.content?.parts?.[0]?.text || "{}";
-        const script = JSON.parse(scriptText);
+        const scriptData = JSON.parse(response.candidates?.[0]?.content?.parts?.[0]?.text || "{}");
+        const script = scriptData.script || {};
+        const veoPrompt = scriptData.veoPrompt || "A futuristic, interconnected digital landscape with visible data flows.";
 
         console.log("VideoService: Script generated for", Object.keys(script).length, "elements.");
 
         return {
             snapshotUrl: screenshotBase64,
-            script: script
+            script: script,
+            veoPrompt: veoPrompt
         };
     } catch (error) {
         console.error("VideoService: Script Generation ERROR:", error);
         return {
             snapshotUrl: screenshotBase64,
-            script: {} // Fallback to empty script
+            script: {},
+            veoPrompt: "A professional architectural walkthrough of a complex distributed system."
         };
     }
 };
