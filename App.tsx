@@ -13,6 +13,17 @@ import { Play, Download, Loader2, Video, Film, Trash2, X } from 'lucide-react';
 
 // Use a more robust ID generator to prevent collisions (especially during real-time sync)
 const generateId = () => `id_${Math.random().toString(36).substr(2, 9)}_${Date.now()}`;
+
+// Utility to clean markdown formatting from AI responses
+const cleanMarkdown = (text: string): string => {
+  return text
+    .replace(/\*\*(.+?)\*\*/g, '$1')  // Remove bold **text**
+    .replace(/\*(.+?)\*/g, '$1')      // Remove italic *text*
+    .replace(/`(.+?)`/g, '$1')        // Remove code `text`
+    .replace(/\[(.+?)\]\(.+?\)/g, '$1') // Remove links [text](url)
+    .replace(/#{1,6}\s/g, '')         // Remove headers
+    .trim();
+};
 const SESSION_ID = 'architect_hackathon_session';
 
 const App: React.FC = () => {
@@ -36,6 +47,11 @@ const App: React.FC = () => {
   const [activeProposal, setActiveProposal] = useState<Proposal | null>(null);
   const [lastToolCallId, setLastToolCallId] = useState<string | null>(null);
   const [lastToolName, setLastToolName] = useState<string | null>(null);
+
+  // Auto Mode State
+  const [isAutoMode, setIsAutoMode] = useState(false);
+  const [autoSpeed, setAutoSpeed] = useState(1); // 0.5x to 3x
+  const autoTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   const canvasRef = useRef<HTMLDivElement>(null);
 
@@ -66,7 +82,7 @@ const App: React.FC = () => {
   };
 
   const processGeminiResponse = useCallback(async (response: any, currentNodes: SystemNode[], currentEdges: SystemEdge[], currentMessages: ChatMessage[]) => {
-    const content = response.candidates?.[0]?.content?.parts
+    const rawContent = response.candidates?.[0]?.content?.parts
       ?.filter((p: any) => p.text)
       .map((p: any) => p.text)
       .join('') || '';
@@ -74,7 +90,9 @@ const App: React.FC = () => {
     const toolCalls = response.functionCalls;
 
     let updatedMessages = currentMessages;
-    if (content) {
+    if (rawContent) {
+      // Clean markdown formatting from AI responses
+      const content = cleanMarkdown(rawContent);
       updatedMessages = [...currentMessages, { id: generateId(), role: 'model', content }];
       setMessages(updatedMessages);
       await persistToFirestore(currentNodes, currentEdges, updatedMessages);
@@ -131,7 +149,7 @@ const App: React.FC = () => {
     }
   };
 
-  const handleConfirm = async () => {
+  const handleConfirm = useCallback(async () => {
     if (!activeProposal) return;
 
     let updatedNodes = nodes;
@@ -162,7 +180,24 @@ const App: React.FC = () => {
         setIsStreaming(false);
       }
     }
-  };
+  }, [activeProposal, nodes, edges, messages, lastToolName, lastToolCallId, processGeminiResponse]);
+
+  // Auto Mode: Auto-confirm proposals after delay
+  useEffect(() => {
+    if (isAutoMode && activeProposal && !isStreaming) {
+      const delay = 2000 / autoSpeed; // Base delay of 2s, adjusted by speed
+      autoTimerRef.current = setTimeout(() => {
+        handleConfirm();
+      }, delay);
+    }
+
+    return () => {
+      if (autoTimerRef.current) {
+        clearTimeout(autoTimerRef.current);
+        autoTimerRef.current = null;
+      }
+    };
+  }, [isAutoMode, activeProposal, isStreaming, autoSpeed, handleConfirm]);
 
   const handleReject = async () => {
     const tName = lastToolName;
@@ -323,6 +358,10 @@ const App: React.FC = () => {
           activeProposal={activeProposal}
           onConfirmProposal={handleConfirm}
           onRejectProposal={handleReject}
+          isAutoMode={isAutoMode}
+          setIsAutoMode={setIsAutoMode}
+          autoSpeed={autoSpeed}
+          setAutoSpeed={setAutoSpeed}
         />
       </div>
     </div>

@@ -1,6 +1,6 @@
 import React, { useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Send, Bot, User, Check, X, Loader2 } from 'lucide-react';
+import { Send, Bot, User, Check, X, Loader2, Zap } from 'lucide-react';
 import { ChatMessage, Proposal } from '../types';
 
 interface ChatInterfaceProps {
@@ -12,6 +12,10 @@ interface ChatInterfaceProps {
   activeProposal: Proposal | null;
   onConfirmProposal: () => void;
   onRejectProposal: () => void;
+  isAutoMode: boolean;
+  setIsAutoMode: (value: boolean) => void;
+  autoSpeed: number;
+  setAutoSpeed: (value: number) => void;
 }
 
 const ChatInterface: React.FC<ChatInterfaceProps> = ({
@@ -22,7 +26,11 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
   isStreaming,
   activeProposal,
   onConfirmProposal,
-  onRejectProposal
+  onRejectProposal,
+  isAutoMode,
+  setIsAutoMode,
+  autoSpeed,
+  setAutoSpeed
 }) => {
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -42,11 +50,53 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
   return (
     <div className="flex flex-col h-full bg-slate-900 border-l border-slate-700">
       {/* Header */}
-      <div className="p-4 border-b border-slate-700 bg-slate-800/50 backdrop-blur">
-        <h2 className="text-lg font-bold flex items-center gap-2">
-          <Bot className="text-blue-400" /> ArchitectAI
-        </h2>
-        <p className="text-xs text-slate-400">Gemini 3 Powered • System Designer</p>
+      <div className="p-4 border-b border-slate-700 bg-slate-800/50 backdrop-blur space-y-3">
+        <div>
+          <h2 className="text-lg font-bold flex items-center gap-2">
+            <Bot className="text-blue-400" /> ArchitectAI
+          </h2>
+          <p className="text-xs text-slate-400">Gemini 3 Powered • System Designer</p>
+        </div>
+
+        {/* Auto Mode Toggle */}
+        <div className="flex items-center justify-between gap-3 p-2 bg-slate-900/50 rounded-lg border border-slate-700">
+          <div className="flex items-center gap-2">
+            <Zap className={`w-4 h-4 ${isAutoMode ? 'text-yellow-400' : 'text-slate-500'}`} />
+            <span className="text-xs font-semibold text-slate-300">Auto Mode</span>
+          </div>
+          <button
+            onClick={() => setIsAutoMode(!isAutoMode)}
+            className={`relative w-10 h-5 rounded-full transition-colors ${isAutoMode ? 'bg-yellow-500' : 'bg-slate-600'
+              }`}
+          >
+            <div
+              className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full transition-transform ${isAutoMode ? 'translate-x-5' : 'translate-x-0'
+                }`}
+            />
+          </button>
+        </div>
+
+        {/* Speed Control */}
+        {isAutoMode && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            className="space-y-1"
+          >
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-slate-400">Speed: {autoSpeed}x</span>
+            </div>
+            <input
+              type="range"
+              min="0.5"
+              max="3"
+              step="0.5"
+              value={autoSpeed}
+              onChange={(e) => setAutoSpeed(parseFloat(e.target.value))}
+              className="w-full h-1 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-yellow-500"
+            />
+          </motion.div>
+        )}
       </div>
 
       {/* Messages */}
@@ -59,11 +109,10 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
             className={`flex flex-col gap-1 ${msg.role === 'user' ? 'items-end' : 'items-start'}`}
           >
             <div
-              className={`max-w-[85%] p-3 rounded-2xl text-sm leading-relaxed ${
-                msg.role === 'user'
+              className={`max-w-[85%] p-3 rounded-2xl text-sm leading-relaxed ${msg.role === 'user'
                   ? 'bg-blue-600 text-white rounded-br-none'
                   : 'bg-slate-800 text-slate-200 rounded-bl-none border border-slate-700'
-              }`}
+                }`}
             >
               {msg.content}
             </div>
@@ -100,11 +149,11 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
             </div>
           </motion.div>
         )}
-        
+
         {isStreaming && !activeProposal && (
-           <div className="flex items-center gap-2 text-slate-500 text-sm ml-2">
-             <Loader2 className="animate-spin w-4 h-4" /> Thinking...
-           </div>
+          <div className="flex items-center gap-2 text-slate-500 text-sm ml-2">
+            <Loader2 className="animate-spin w-4 h-4" /> Thinking...
+          </div>
         )}
       </div>
 
