@@ -1,25 +1,44 @@
 import React, { memo } from 'react';
 import { Handle, Position, NodeProps } from '@xyflow/react';
 import { motion } from 'framer-motion';
-import { Database, Server, Smartphone, Cloud, ShieldCheck, Layers, Cpu, Box } from 'lucide-react';
-import { NodeType, NodeStatus } from '../types';
+import {
+    Database, Server, Smartphone, Cloud, ShieldCheck, Layers, Cpu, Box,
+    Globe, Lock, Terminal, Activity, Zap, HardDrive, Share2, Search,
+    User, Settings, Mail, Bell, CreditCard, ShoppingCart
+} from 'lucide-react';
+import { NodeType } from '../types';
 
-const getNodeIcon = (type: string) => {
-    switch (type) {
+const getNodeIcon = (type: string, label: string = '') => {
+    const l = (label || '').toLowerCase();
+    const t = (type || '').toLowerCase();
+
+    // Specific Keyword Overrides
+    if (l.includes('postgres') || l.includes('sql') || l.includes('mongo')) return <Database className="w-6 h-6 text-cyan-400" />;
+    if (l.includes('redis') || l.includes('memcached')) return <Zap className="w-6 h-6 text-pink-400" />;
+    if (l.includes('auth') || l.includes('security') || l.includes('login')) return <Lock className="w-6 h-6 text-emerald-400" />;
+    if (l.includes('s3') || l.includes('storage') || l.includes('bucket')) return <HardDrive className="w-6 h-6 text-amber-400" />;
+    if (l.includes('search') || l.includes('elastic')) return <Search className="w-6 h-6 text-indigo-400" />;
+    if (l.includes('user') || l.includes('profile')) return <User className="w-6 h-6 text-blue-300" />;
+    if (l.includes('payment') || l.includes('stripe')) return <CreditCard className="w-6 h-6 text-green-400" />;
+    if (l.includes('cart') || l.includes('order')) return <ShoppingCart className="w-6 h-6 text-orange-400" />;
+    if (l.includes('api') || l.includes('gateway')) return <Globe className="w-6 h-6 text-sky-400" />;
+
+    switch (t) {
         case 'database': return <Database className="w-6 h-6 text-blue-400" />;
         case 'server': return <Server className="w-6 h-6 text-green-400" />;
         case 'client': return <Smartphone className="w-6 h-6 text-purple-400" />;
         case 'cloud': return <Cloud className="w-6 h-6 text-sky-300" />;
         case 'gateway': return <ShieldCheck className="w-6 h-6 text-yellow-400" />;
-        case 'cache': return <Layers className="w-6 h-6 text-pink-400" />;
-        case 'queue': return <Cpu className="w-6 h-6 text-orange-400" />;
-        default: return <Box className="w-6 h-6 text-gray-400" />;
+        case 'cache': return <Layers className="w-6 h-6 text-pink-500" />;
+        case 'queue': return <Cpu className="w-6 h-6 text-orange-500" />;
+        default: return <Box className="w-6 h-6 text-slate-400" />;
     }
 };
 
 const ArchitectNode = ({ data }: NodeProps) => {
     const isGhost = data.status === 'PROPOSED';
     const type = data.type as NodeType;
+    const label = (data.label as string) || '';
     const isActive = !!data.isActive;
     const isDimmed = !!data.dimmed;
 
@@ -45,12 +64,12 @@ const ArchitectNode = ({ data }: NodeProps) => {
                     }`}
             >
                 <div className={`p-2.5 rounded-2xl transition-all duration-500 ${isGhost ? 'bg-yellow-400/10' : 'bg-slate-900 shadow-inner group-hover:scale-110'}`}>
-                    {getNodeIcon(type)}
+                    {getNodeIcon(type, label)}
                 </div>
 
                 <div className="flex flex-col items-center">
                     <span className="text-[13px] font-bold text-white tracking-wide text-center">
-                        {data.label as string}
+                        {label}
                     </span>
                     {isActive ? (
                         <motion.span

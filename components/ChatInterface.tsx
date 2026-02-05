@@ -1,6 +1,6 @@
 import React, { useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Send, Bot, User, Check, X, Loader2, Zap, Download, Plus } from 'lucide-react';
+import { Send, Bot, User, Check, X, Loader2, Zap, Download, Plus, Undo2, Redo2 } from 'lucide-react';
 import { ChatMessage, Proposal } from '../types';
 
 interface ChatInterfaceProps {
@@ -18,6 +18,10 @@ interface ChatInterfaceProps {
   setAutoSpeed: (value: number) => void;
   onExportChat: () => void;
   onNewChat: () => void;
+  canUndo?: boolean;
+  canRedo?: boolean;
+  onUndo?: () => void;
+  onRedo?: () => void;
 }
 
 const ChatInterface: React.FC<ChatInterfaceProps> = ({
@@ -34,7 +38,11 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
   autoSpeed,
   setAutoSpeed,
   onExportChat,
-  onNewChat
+  onNewChat,
+  canUndo,
+  canRedo,
+  onUndo,
+  onRedo
 }) => {
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -62,7 +70,24 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
             </h2>
             <p className="text-xs text-slate-400">Gemini 3 Powered • System Designer</p>
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-1.5">
+            <button
+              onClick={onUndo}
+              disabled={!canUndo}
+              className={`p-2 bg-slate-700 hover:bg-slate-600 rounded-lg transition-colors ${!canUndo ? 'opacity-30 cursor-not-allowed' : ''}`}
+              title="Undo"
+            >
+              <Undo2 size={16} className="text-slate-300" />
+            </button>
+            <button
+              onClick={onRedo}
+              disabled={!canRedo}
+              className={`p-2 bg-slate-700 hover:bg-slate-600 rounded-lg transition-colors ${!canRedo ? 'opacity-30 cursor-not-allowed' : ''}`}
+              title="Redo"
+            >
+              <Redo2 size={16} className="text-slate-300" />
+            </button>
+            <div className="w-1 h-6 bg-slate-700 mx-1 self-center" />
             <button
               onClick={onNewChat}
               className="p-2 bg-slate-700 hover:bg-slate-600 rounded-lg transition-colors"
