@@ -301,7 +301,8 @@ const CinematicReplayContent: React.FC<CinematicReplayProps> = ({ nodes, edges, 
                         elementsSelectable={true}
                         zoomOnScroll={true}
                         panOnDrag={true}
-                        panOnScroll={true}
+                        panOnScroll={false}
+                        preventScrolling={true}
                         minZoom={0.1}
                         maxZoom={4}
                     >

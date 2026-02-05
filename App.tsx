@@ -298,6 +298,27 @@ const App: React.FC = () => {
     }
   };
 
+  const handleExportImage = async () => {
+    const canvas = document.querySelector('.react-flow__renderer') as HTMLElement;
+    if (!canvas) return;
+
+    try {
+      const snapshot = await html2canvas(canvas, {
+        backgroundColor: '#0f172a',
+        scale: 2,
+        useCORS: true,
+        allowTaint: true,
+        logging: false
+      });
+      const link = document.createElement('a');
+      link.href = snapshot.toDataURL('image/png');
+      link.download = `architect-design-${Date.now()}.png`;
+      link.click();
+    } catch (err) {
+      console.error("Export failed:", err);
+    }
+  };
+
   const handleClearDesign = async () => {
     if (window.confirm("Are you sure you want to clear the entire design?")) {
       addToHistory(nodes, edges, messages);
@@ -412,7 +433,11 @@ const App: React.FC = () => {
               >
                 <Trash2 size={20} />
               </button>
-              <button className="p-2 text-slate-400 hover:text-white hover:bg-white/10 rounded-xl transition-all" title="Export Image">
+              <button
+                onClick={handleExportImage}
+                className="p-2 text-slate-400 hover:text-white hover:bg-white/10 rounded-xl transition-all"
+                title="Export Image"
+              >
                 <Download size={20} />
               </button>
             </div>
@@ -423,8 +448,8 @@ const App: React.FC = () => {
               onClick={handleCinematicView}
               disabled={isGeneratingVideo || nodes.length === 0}
               className={`flex items-center gap-2 px-4 py-2 rounded-xl font-bold tracking-wide transition-all ${isGeneratingVideo || nodes.length === 0
-                  ? 'bg-slate-800 text-slate-500 cursor-not-allowed'
-                  : 'bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white shadow-lg shadow-blue-500/20 hover:shadow-blue-500/40'
+                ? 'bg-slate-800 text-slate-500 cursor-not-allowed'
+                : 'bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white shadow-lg shadow-blue-500/20 hover:shadow-blue-500/40'
                 }`}
             >
               {isGeneratingVideo ? <Loader2 className="animate-spin" size={18} /> : <Play size={18} fill="currentColor" />}

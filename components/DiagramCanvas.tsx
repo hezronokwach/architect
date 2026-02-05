@@ -97,6 +97,8 @@ const DiagramCanvasContent: React.FC<DiagramCanvasProps> = ({
         fitView
         fitViewOptions={{ padding: 0.2 }}
         className="bg-slate-950"
+        panOnScroll={false}
+        preventScrolling={true}
         minZoom={0.2}
         maxZoom={2}
       >
