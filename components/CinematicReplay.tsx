@@ -130,15 +130,41 @@ const CinematicReplayContent: React.FC<CinematicReplayProps> = ({ nodes, edges, 
         }
     }, [activeStep, nodes, edges, setRFNodes, setRFEdges, setCenter]);
 
+    const { getNodes, getEdges, fitView } = useReactFlow();
+
     const handleDownloadSnapshot = async () => {
         if (!replayContainerRef.current) return;
+
+        // 1. Force fit view to ensure everything is visible for the screenshot
+        fitView({ padding: 0.1, duration: 0 });
+
+        // Short delay to allow fitView to apply
+        await new Promise(resolve => setTimeout(resolve, 100));
+
         const canvas = replayContainerRef.current.querySelector('.react-flow__renderer') as HTMLElement;
         if (canvas) {
-            const screenshot = await html2canvas(canvas, { backgroundColor: '#020617', scale: 2 });
-            const link = document.createElement('a');
-            link.href = screenshot.toDataURL('image/png');
-            link.download = `architect-cinematic-step-${activeStep}.png`;
-            link.click();
+            // Apply a temporary style to ensure background is captured
+            const originalStyle = canvas.style.cssText;
+            canvas.style.backgroundColor = '#020617';
+
+            try {
+                const screenshot = await html2canvas(canvas, {
+                    backgroundColor: '#020617',
+                    scale: 2,
+                    logging: false,
+                    useCORS: true,
+                    allowTaint: true
+                });
+
+                const link = document.createElement('a');
+                link.href = screenshot.toDataURL('image/png');
+                link.download = `architect-cinematic-flow-${activeStep}.png`;
+                link.click();
+            } catch (err) {
+                console.error("Snapshot failed:", err);
+            } finally {
+                canvas.style.cssText = originalStyle;
+            }
         }
     };
 
@@ -204,13 +230,14 @@ const CinematicReplayContent: React.FC<CinematicReplayProps> = ({ nodes, edges, 
         }
       `}</style>
 
-            {/* Dynamic Background */}
-            <div className="absolute inset-0 pointer-events-none">
-                <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_50%_50%,rgba(59,130,246,0.08),transparent_80%)]" />
-                <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-10 mix-blend-overlay" />
+            {/* CRT/Scanline Effects */}
+            <div className="absolute inset-0 pointer-events-none z-[110] overflow-hidden rounded-[3rem]">
+                <div className="absolute inset-0 bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.25)_50%),linear-gradient(90deg,rgba(255,0,0,0.06),rgba(0,255,0,0.02),rgba(0,0,255,0.06))] z-[110] bg-[length:100%_2px,3px_100%] pointer-events-none" />
+                <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_50%,rgba(0,0,0,0.6)_100%)] z-[111] pointer-events-none" />
+                <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-b from-white/5 to-transparent opacity-10 animate-scanline pointer-events-none z-[112]" />
             </div>
 
-            {/* Veo Vision HUD (Top Left) */}
+            {/* Veo Vision HUD */}
             {veoPrompt && (
                 <motion.div
                     initial={{ opacity: 0, x: -30 }}
@@ -229,43 +256,38 @@ const CinematicReplayContent: React.FC<CinematicReplayProps> = ({ nodes, edges, 
                 </motion.div>
             )}
 
-            {/* Narrative HUD (Bottom) */}
+            {/* Narrative HUD (Relocated to Top Center) */}
             <AnimatePresence mode="wait">
-                <motion.div
-                    key={`step-${activeStep}`}
-                    initial={{ opacity: 0, y: 50 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -20 }}
-                    className="absolute bottom-12 z-50 bg-slate-900/60 backdrop-blur-3xl border border-white/10 p-10 rounded-[2.5rem] w-full max-w-4xl shadow-[0_40px_100px_rgba(0,0,0,0.8)] flex flex-col items-center text-center"
-                >
-                    <div className="flex items-center gap-3 mb-5">
-                        <div className="bg-blue-600/20 p-2.5 rounded-2xl">
-                            <Zap className="text-blue-400 w-6 h-6 fill-blue-400" />
+                {currentNarration && (
+                    <motion.div
+                        key={`step-${activeStep}`}
+                        initial={{ opacity: 0, y: -20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -20 }}
+                        className="absolute top-24 left-1/2 transform -translate-x-1/2 z-[55] w-full max-w-2xl px-4 pointer-events-none"
+                    >
+                        <div className="bg-slate-900/40 backdrop-blur-sm border border-white/5 p-4 rounded-xl flex items-center gap-4 shadow-xl">
+                            <div className="hidden md:flex flex-col items-center justify-center p-2 bg-blue-500/10 rounded-lg border border-blue-500/20 min-w-[60px]">
+                                <Zap className="text-blue-400 w-4 h-4 mb-1" />
+                                <span className="text-[9px] font-mono text-blue-300 uppercase">STEP</span>
+                                <span className="text-xs font-bold text-white font-mono">{activeStep}</span>
+                            </div>
+
+                            <div className="flex-1 text-center md:text-left">
+                                <p className="text-sm md:text-base font-medium text-white/90 leading-relaxed font-sans drop-shadow-sm">
+                                    "{currentNarration}"
+                                </p>
+                            </div>
                         </div>
-                        <span className="text-[11px] font-mono text-blue-400 tracking-[0.6em] uppercase">
-                            Phase {activeStep}: {activeStep <= nodes.length ? 'System Node' : 'Network Flow'}
-                        </span>
-                    </div>
-                    <p className="text-2xl font-bold text-white leading-relaxed tracking-tight max-w-3xl italic">
-                        "{currentNarration}"
-                    </p>
-                    <div className="w-full h-1 bg-slate-800 mt-8 rounded-full overflow-hidden">
-                        <motion.div
-                            key={`progress-bar-${activeStep}-${playbackSpeed}`}
-                            initial={{ scaleX: 0 }}
-                            animate={{ scaleX: 1 }}
-                            transition={{ duration: intervalDuration / 1000, ease: "linear" }}
-                            className="h-full bg-blue-500 origin-left"
-                        />
-                    </div>
-                </motion.div>
+                    </motion.div>
+                )}
             </AnimatePresence>
 
             <div
                 className={`w-full h-full relative perspective-container flex items-center justify-center`}
                 ref={replayContainerRef}
             >
-                <div className={`w-[90%] h-[80%] rounded-[3rem] overflow-hidden border border-white/10 ${is3DMode ? 'canvas-3d' : 'canvas-2d'}`}>
+                <div className={`w-[95%] h-[90%] rounded-[3rem] overflow-hidden border  ${is3DMode ? 'border-cyan-500/20 shadow-[0_0_50px_rgba(6,182,212,0.1)] canvas-3d' : 'border-white/10 canvas-2d'}`}>
                     <ReactFlow
                         nodes={rfNodes}
                         edges={rfEdges}
@@ -276,13 +298,14 @@ const CinematicReplayContent: React.FC<CinematicReplayProps> = ({ nodes, edges, 
                         className="bg-slate-950"
                         nodesDraggable={false}
                         nodesConnectable={false}
-                        elementsSelectable={false}
-                        zoomOnScroll={false}
+                        elementsSelectable={true}
+                        zoomOnScroll={true}
                         panOnDrag={true}
-                        minZoom={0.5}
-                        maxZoom={2}
+                        panOnScroll={true}
+                        minZoom={0.1}
+                        maxZoom={4}
                     >
-                        <Background color="#1e293b" variant="lines" gap={60} size={1} opacity={0.4} />
+                        <Background color="#1e293b" variant="lines" gap={60} size={1} opacity={is3DMode ? 0.6 : 0.3} />
                     </ReactFlow>
                 </div>
 
@@ -290,17 +313,17 @@ const CinematicReplayContent: React.FC<CinematicReplayProps> = ({ nodes, edges, 
                 <div className="absolute top-10 right-10 flex items-center gap-3 z-[100]">
                     <button
                         onClick={() => setIs3DMode(!is3DMode)}
-                        className={`flex items-center gap-2 border px-5 py-3.5 rounded-[1.5rem] text-xs font-black transition-all shadow-2xl active:scale-95 ${is3DMode ? 'bg-blue-600 border-blue-400 text-white' : 'bg-slate-900 border-white/10 text-slate-400'}`}
+                        className={`flex items-center gap-2 border px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-lg active:scale-95 ${is3DMode ? 'bg-cyan-600/20 border-cyan-400 text-cyan-300' : 'bg-slate-900 border-white/10 text-slate-400'}`}
                     >
-                        <Box size={16} /> {is3DMode ? '3D VIEW' : '2D VIEW'}
+                        <Box size={14} /> {is3DMode ? '3D' : '2D'}
                     </button>
 
-                    <div className="bg-slate-900 border border-white/10 p-1.5 rounded-[1.5rem] flex gap-1 shadow-2xl">
+                    <div className="bg-slate-900/80 backdrop-blur border border-white/10 p-1 rounded-xl flex gap-1 shadow-lg">
                         {[0.5, 1, 2].map(speed => (
                             <button
                                 key={speed}
                                 onClick={() => setPlaybackSpeed(speed)}
-                                className={`px-3 py-2 rounded-xl text-[10px] font-black transition-all ${playbackSpeed === speed ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-white'}`}
+                                className={`px-2 py-1.5 rounded-lg text-[10px] font-bold transition-all ${playbackSpeed === speed ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-white'}`}
                             >
                                 {speed}x
                             </button>
@@ -309,47 +332,61 @@ const CinematicReplayContent: React.FC<CinematicReplayProps> = ({ nodes, edges, 
 
                     <button
                         onClick={() => setIsPlaying(!isPlaying)}
-                        className="flex items-center gap-2 bg-slate-900 border border-white/10 px-6 py-3.5 rounded-[1.5rem] text-xs font-black text-white hover:bg-slate-800 transition-all shadow-2xl active:scale-95"
+                        className="flex items-center gap-2 bg-slate-900/80 backdrop-blur border border-white/10 px-5 py-2 rounded-xl text-xs font-bold text-white hover:bg-slate-800 transition-all shadow-lg active:scale-95"
                     >
-                        {isPlaying ? <Pause size={16} fill="currentColor" /> : <Play size={16} fill="currentColor" />}
-                        {isPlaying ? 'PAUSE' : 'RESUME'}
+                        {isPlaying ? <Pause size={14} fill="currentColor" /> : <Play size={14} fill="currentColor" />}
+                        {isPlaying ? 'PAUSE' : 'PLAY'}
                     </button>
 
                     <button
                         onClick={handleDownloadSnapshot}
-                        className="bg-blue-600 hover:bg-blue-500 text-white p-3.5 rounded-[1.5rem] shadow-2xl transition-all active:scale-95"
+                        className="bg-slate-900/80 backdrop-blur border border-white/10 text-white p-2 rounded-xl shadow-lg hover:bg-slate-800 transition-all active:scale-95"
                     >
-                        <Download size={20} />
+                        <Download size={16} />
                     </button>
 
                     <button
                         onClick={() => { setActiveStep(0); setIsPlaying(true); }}
-                        className="bg-slate-900 border border-white/10 text-white p-3.5 rounded-[1.5rem] shadow-2xl hover:bg-slate-800 transition-all active:scale-95"
+                        className="bg-slate-900/80 backdrop-blur border border-white/10 text-white p-2 rounded-xl shadow-lg hover:bg-slate-800 transition-all active:scale-95"
                     >
-                        <RefreshCw size={20} className={isPlaying ? 'animate-spin-slow' : ''} />
+                        <RefreshCw size={16} className={isPlaying ? 'animate-spin-slow' : ''} />
                     </button>
 
                     <button
                         onClick={onClose}
-                        className="bg-red-600/20 hover:bg-red-600 border border-red-500/50 text-white p-3.5 rounded-[1.5rem] shadow-2xl transition-all"
+                        className="bg-red-500/10 hover:bg-red-500/20 border border-red-500/50 text-red-400 p-2 rounded-xl shadow-lg transition-all"
                     >
-                        <X size={20} />
+                        <X size={18} />
                     </button>
+                </div>
+
+                {/* Zoom Controls (Simulated for HUD feel) */}
+                <div className="absolute right-10 bottom-10 flex flex-col gap-2 z-[100]">
+                    <div className="bg-slate-900/80 backdrop-blur border border-white/10 rounded-lg p-2 flex flex-col gap-2 shadow-lg">
+                        <div className="text-[10px] text-center text-slate-500 font-mono">ZOOM</div>
+                        <div className="w-8 h-24 bg-slate-800 rounded relative overflow-hidden">
+                            <div className="absolute bottom-0 w-full bg-blue-500/50" style={{ height: '60%' }} />
+                            {/* Hash marks */}
+                            <div className="absolute inset-0 flex flex-col justify-between py-1 px-1">
+                                {[...Array(5)].map((_, i) => <div key={i} className="w-2 h-[1px] bg-white/20" />)}
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
                 {/* Step Progress HUD */}
                 <div className="absolute top-10 left-10 z-[100]">
-                    <div className="text-[10px] font-mono text-white/20 uppercase tracking-[0.5em] mb-4">Reconstruction Protocol</div>
-                    <div className="flex gap-2">
+                    <div className="text-[10px] font-mono text-cyan-400/50 uppercase tracking-[0.5em] mb-2 drop-shadow-lg font-bold">Reconstruction Protocol</div>
+                    <div className="flex gap-1 bg-black/20 p-1 rounded-full backdrop-blur-sm">
                         {Array.from({ length: totalSteps }).map((_, i) => (
                             <motion.div
                                 key={i}
                                 animate={{
-                                    height: i === activeStep - 1 ? 24 : 8,
-                                    width: 8,
-                                    backgroundColor: i < activeStep ? '#3b82f6' : '#1e293b'
+                                    height: 4,
+                                    width: i === activeStep - 1 ? 24 : 8,
+                                    backgroundColor: i < activeStep ? '#22d3ee' : 'rgba(255,255,255,0.1)'
                                 }}
-                                className="rounded-full transition-all"
+                                className="rounded-full transition-all shadow-[0_0_5px_rgba(34,211,238,0.5)]"
                             />
                         ))}
                     </div>
