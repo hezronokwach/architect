@@ -382,59 +382,73 @@ const App: React.FC = () => {
           />
         )}
 
-        <div className="absolute top-4 right-4 flex gap-2 z-50">
-          <button
-            onClick={handleUndo}
-            disabled={history.length === 0}
-            className={`bg-slate-800/80 backdrop-blur border border-slate-600 hover:bg-slate-700 text-white p-2 rounded-lg transition-all shadow-lg ${history.length === 0 ? 'opacity-30 cursor-not-allowed' : ''}`}
-            title="Undo"
-          >
-            <Undo2 size={18} />
-          </button>
-          <button
-            onClick={handleRedo}
-            disabled={future.length === 0}
-            className={`bg-slate-800/80 backdrop-blur border border-slate-600 hover:bg-slate-700 text-white p-2 rounded-lg transition-all shadow-lg ${future.length === 0 ? 'opacity-30 cursor-not-allowed' : ''}`}
-            title="Redo"
-          >
-            <Redo2 size={18} />
-          </button>
+        {/* Floating Dock Toolbar */}
+        <div className="absolute bottom-6 left-1/2 transform -translate-x-1/2 z-50">
+          <div className="glass-panel px-6 py-3 rounded-2xl flex items-center gap-4 transition-all hover:scale-105 duration-300">
+            <div className="flex gap-2 border-r border-slate-700/50 pr-4">
+              <button
+                onClick={handleUndo}
+                disabled={history.length === 0}
+                className={`p-2 rounded-xl transition-all ${history.length === 0 ? 'text-slate-600 cursor-not-allowed' : 'text-blue-300 hover:text-white hover:bg-white/10'}`}
+                title="Undo"
+              >
+                <Undo2 size={20} />
+              </button>
+              <button
+                onClick={handleRedo}
+                disabled={future.length === 0}
+                className={`p-2 rounded-xl transition-all ${future.length === 0 ? 'text-slate-600 cursor-not-allowed' : 'text-blue-300 hover:text-white hover:bg-white/10'}`}
+                title="Redo"
+              >
+                <Redo2 size={20} />
+              </button>
+            </div>
 
-          <button
-            onClick={handleClearDesign}
-            className="bg-slate-800/80 backdrop-blur border border-red-500/30 hover:bg-red-500/20 text-red-400 px-4 py-2 rounded-lg flex items-center gap-2 text-sm transition-all shadow-lg shadow-red-500/5"
-          >
-            <Trash2 size={16} /> Reset
-          </button>
-          <button className="bg-slate-800/80 backdrop-blur border border-slate-600 hover:bg-slate-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 text-sm transition-all">
-            <Download size={16} /> Export
-          </button>
-          <button
-            onClick={handleCinematicView}
-            disabled={isGeneratingVideo || nodes.length === 0}
-            className={`bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white px-4 py-2 rounded-lg flex items-center gap-2 text-sm shadow-lg shadow-blue-500/20 transition-all ${isGeneratingVideo || nodes.length === 0 ? 'opacity-50 cursor-not-allowed grayscale' : ''}`}
-          >
-            {isGeneratingVideo ? <Loader2 className="animate-spin" size={16} /> : <Play size={16} />}
-            Cinematic View
-          </button>
+            <div className="flex gap-2">
+              <button
+                onClick={handleClearDesign}
+                className="p-2 text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-xl transition-all"
+                title="Reset Design"
+              >
+                <Trash2 size={20} />
+              </button>
+              <button className="p-2 text-slate-400 hover:text-white hover:bg-white/10 rounded-xl transition-all" title="Export Image">
+                <Download size={20} />
+              </button>
+            </div>
+
+            <div className="h-6 w-px bg-slate-700/50 mx-2" />
+
+            <button
+              onClick={handleCinematicView}
+              disabled={isGeneratingVideo || nodes.length === 0}
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl font-bold tracking-wide transition-all ${isGeneratingVideo || nodes.length === 0
+                  ? 'bg-slate-800 text-slate-500 cursor-not-allowed'
+                  : 'bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white shadow-lg shadow-blue-500/20 hover:shadow-blue-500/40'
+                }`}
+            >
+              {isGeneratingVideo ? <Loader2 className="animate-spin" size={18} /> : <Play size={18} fill="currentColor" />}
+              <span>CINEMATIC</span>
+            </button>
+          </div>
         </div>
       </div>
 
       {/* Collapsible Chat Panel */}
       <motion.div
-        animate={{ width: isChatCollapsed ? 0 : 400 }}
+        animate={{ width: isChatCollapsed ? 0 : 420 }}
         transition={{ type: "spring", stiffness: 300, damping: 30 }}
-        className="relative shadow-2xl z-10 border-l border-slate-700 bg-slate-900"
+        className="relative z-10 glass-panel border-l border-white/5 bg-slate-900/80 backdrop-blur-3xl"
       >
         <button
           onClick={() => setIsChatCollapsed(!isChatCollapsed)}
-          className={`absolute top-1/2 -left-8 transform -translate-y-1/2 p-2 bg-slate-800 border border-slate-700 rounded-l-xl text-slate-300 hover:text-white transition-all shadow-xl z-50`}
+          className={`absolute top-1/2 -left-3 transform -translate-y-1/2 w-6 h-12 bg-slate-800 border-y border-l border-white/10 rounded-l-lg text-blue-300 hover:text-white transition-all shadow-xl z-50 flex items-center justify-center hover:w-8 hover:-left-8 duration-200`}
         >
-          {isChatCollapsed ? <ChevronLeft size={20} /> : <ChevronRight size={20} />}
+          {isChatCollapsed ? <ChevronLeft size={16} /> : <ChevronRight size={16} />}
         </button>
 
         {!isChatCollapsed && (
-          <div className="w-[400px] h-full overflow-hidden">
+          <div className="w-[420px] h-full overflow-hidden">
             <ChatInterface
               messages={messages}
               input={input}
