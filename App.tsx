@@ -279,6 +279,40 @@ const App: React.FC = () => {
     }
   };
 
+  const handleExportChat = () => {
+    const chatData = {
+      messages,
+      nodes: nodes.map(n => ({ id: n.id, label: n.label, type: n.type, description: n.description })),
+      edges: edges.map(e => ({ from: e.fromId, to: e.toId, label: e.label })),
+      exportedAt: new Date().toISOString()
+    };
+
+    const blob = new Blob([JSON.stringify(chatData, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `architect-chat-${new Date().toISOString().split('T')[0]}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  const handleNewChat = async () => {
+    if (window.confirm("Start a new chat? Current design will be saved to Firestore.")) {
+      const initialMessages: ChatMessage[] = [{
+        id: 'welcome',
+        role: 'model',
+        content: "Hello! I'm your AI System Architect. Describe what you want to build, and I'll design it step-by-step."
+      }];
+      setNodes([]);
+      setEdges([]);
+      setMessages(initialMessages);
+      setActiveProposal(null);
+      await persistToFirestore([], [], initialMessages);
+    }
+  };
+
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-slate-900 text-white font-sans">
       <div className="flex-1 relative" ref={canvasRef}>
@@ -362,6 +396,8 @@ const App: React.FC = () => {
           setIsAutoMode={setIsAutoMode}
           autoSpeed={autoSpeed}
           setAutoSpeed={setAutoSpeed}
+          onExportChat={handleExportChat}
+          onNewChat={handleNewChat}
         />
       </div>
     </div>

@@ -1,6 +1,6 @@
 import React, { useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Send, Bot, User, Check, X, Loader2, Zap } from 'lucide-react';
+import { Send, Bot, User, Check, X, Loader2, Zap, Download, Plus } from 'lucide-react';
 import { ChatMessage, Proposal } from '../types';
 
 interface ChatInterfaceProps {
@@ -16,6 +16,8 @@ interface ChatInterfaceProps {
   setIsAutoMode: (value: boolean) => void;
   autoSpeed: number;
   setAutoSpeed: (value: number) => void;
+  onExportChat: () => void;
+  onNewChat: () => void;
 }
 
 const ChatInterface: React.FC<ChatInterfaceProps> = ({
@@ -30,7 +32,9 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
   isAutoMode,
   setIsAutoMode,
   autoSpeed,
-  setAutoSpeed
+  setAutoSpeed,
+  onExportChat,
+  onNewChat
 }) => {
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -51,11 +55,29 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
     <div className="flex flex-col h-full bg-slate-900 border-l border-slate-700">
       {/* Header */}
       <div className="p-4 border-b border-slate-700 bg-slate-800/50 backdrop-blur space-y-3">
-        <div>
-          <h2 className="text-lg font-bold flex items-center gap-2">
-            <Bot className="text-blue-400" /> ArchitectAI
-          </h2>
-          <p className="text-xs text-slate-400">Gemini 3 Powered • System Designer</p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-lg font-bold flex items-center gap-2">
+              <Bot className="text-blue-400" /> ArchitectAI
+            </h2>
+            <p className="text-xs text-slate-400">Gemini 3 Powered • System Designer</p>
+          </div>
+          <div className="flex gap-2">
+            <button
+              onClick={onNewChat}
+              className="p-2 bg-slate-700 hover:bg-slate-600 rounded-lg transition-colors"
+              title="New Chat"
+            >
+              <Plus size={16} className="text-slate-300" />
+            </button>
+            <button
+              onClick={onExportChat}
+              className="p-2 bg-slate-700 hover:bg-slate-600 rounded-lg transition-colors"
+              title="Export Chat"
+            >
+              <Download size={16} className="text-slate-300" />
+            </button>
+          </div>
         </div>
 
         {/* Auto Mode Toggle */}
@@ -110,8 +132,8 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
           >
             <div
               className={`max-w-[85%] p-3 rounded-2xl text-sm leading-relaxed ${msg.role === 'user'
-                  ? 'bg-blue-600 text-white rounded-br-none'
-                  : 'bg-slate-800 text-slate-200 rounded-bl-none border border-slate-700'
+                ? 'bg-blue-600 text-white rounded-br-none'
+                : 'bg-slate-800 text-slate-200 rounded-bl-none border border-slate-700'
                 }`}
             >
               {msg.content}
@@ -133,20 +155,28 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
             <p className="text-sm text-slate-300 mb-4">
               I want to add <strong className="text-white">{activeProposal.data.label}</strong> to the design.
             </p>
-            <div className="flex gap-2">
-              <button
-                onClick={onConfirmProposal}
-                className="flex-1 bg-green-600 hover:bg-green-500 text-white py-2 rounded-lg text-sm font-semibold flex items-center justify-center gap-2 transition-colors"
-              >
-                <Check size={16} /> Confirm
-              </button>
-              <button
-                onClick={onRejectProposal}
-                className="flex-1 bg-slate-700 hover:bg-slate-600 text-white py-2 rounded-lg text-sm font-semibold flex items-center justify-center gap-2 transition-colors"
-              >
-                <X size={16} /> Reject
-              </button>
-            </div>
+            {!isAutoMode && (
+              <div className="flex gap-2">
+                <button
+                  onClick={onConfirmProposal}
+                  className="flex-1 bg-green-600 hover:bg-green-500 text-white py-2 rounded-lg text-sm font-semibold flex items-center justify-center gap-2 transition-colors"
+                >
+                  <Check size={16} /> Confirm
+                </button>
+                <button
+                  onClick={onRejectProposal}
+                  className="flex-1 bg-slate-700 hover:bg-slate-600 text-white py-2 rounded-lg text-sm font-semibold flex items-center justify-center gap-2 transition-colors"
+                >
+                  <X size={16} /> Reject
+                </button>
+              </div>
+            )}
+            {isAutoMode && (
+              <div className="flex items-center justify-center gap-2 text-yellow-400 text-xs">
+                <Loader2 className="animate-spin w-4 h-4" />
+                <span>Auto-confirming in {(2 / autoSpeed).toFixed(1)}s...</span>
+              </div>
+            )}
           </motion.div>
         )}
 
@@ -164,13 +194,19 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
-            disabled={isStreaming || activeProposal !== null}
-            placeholder={activeProposal ? "Please confirm or reject proposal..." : "Describe a system (e.g., 'Build a scalable e-commerce backend')..."}
+            disabled={isStreaming || (activeProposal !== null && isAutoMode)}
+            placeholder={
+              activeProposal && !isAutoMode
+                ? "Ask questions or request changes before confirming..."
+                : activeProposal && isAutoMode
+                  ? "Auto Mode active..."
+                  : "Describe a system (e.g., 'Build a scalable e-commerce backend')..."
+            }
             className="w-full bg-slate-900 text-white rounded-xl pl-4 pr-12 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 border border-slate-700 resize-none h-14 disabled:opacity-50"
           />
           <button
             onClick={onSend}
-            disabled={!input.trim() || isStreaming || activeProposal !== null}
+            disabled={!input.trim() || isStreaming || (activeProposal !== null && isAutoMode)}
             className="absolute right-2 top-2 p-2 bg-blue-600 rounded-lg text-white hover:bg-blue-500 disabled:opacity-50 disabled:hover:bg-blue-600 transition-all"
           >
             <Send size={16} />
