@@ -24,16 +24,20 @@ const edgeTypes = { architect: ArchitectEdge };
 interface CinematicReplayProps {
     nodes: SystemNode[];
     edges: SystemEdge[];
-    script: Record<string, string>;
+    technicalScript: Record<string, string>;
+    simpleScript: Record<string, string>;
     veoPrompt?: string;
     onClose: () => void;
 }
 
-const CinematicReplayContent: React.FC<CinematicReplayProps> = ({ nodes, edges, script, veoPrompt, onClose }) => {
+const CinematicReplayContent: React.FC<CinematicReplayProps> = ({ nodes, edges, technicalScript, simpleScript, veoPrompt, onClose }) => {
     const [activeStep, setActiveStep] = useState(0);
     const [isPlaying, setIsPlaying] = useState(true);
     const [playbackSpeed, setPlaybackSpeed] = useState(1);
     const [is3DMode, setIs3DMode] = useState(true);
+    const [narrationMode, setNarrationMode] = useState<'pro' | 'simple'>('pro');
+    const [showVeoPrompt, setShowVeoPrompt] = useState(false);
+
     const { setCenter } = useReactFlow();
     const replayContainerRef = useRef<HTMLDivElement>(null);
 
@@ -170,13 +174,14 @@ const CinematicReplayContent: React.FC<CinematicReplayProps> = ({ nodes, edges, 
 
     const currentNarration = useMemo(() => {
         if (activeStep <= 0) return "Click play to begin the architectural walkthrough.";
+        const script = narrationMode === 'pro' ? technicalScript : simpleScript;
 
         if (activeStep <= nodes.length) {
             const node = nodes[activeStep - 1];
             if (!node) return "...";
             const nodeFallback = node.description
                 ? `${node.label} serves as a ${node.description.toLowerCase()}`
-                : `Initializing ${node.label} as a core ${node.type} component within the system architecture.`;
+                : `Initializing ${node.label} as a core ${node.type} component.`;
             return script[node.id] || nodeFallback;
         } else {
             const edge = edges[activeStep - nodes.length - 1];
@@ -190,20 +195,16 @@ const CinematicReplayContent: React.FC<CinematicReplayProps> = ({ nodes, edges, 
             const flowDescription = edge.label ? `transmitting ${edge.label.toLowerCase()}` : "handling traffic";
 
             if (targetNode?.type === 'cache') {
-                fallback = `${sourceName} leverages high-speed caching on ${targetName} to reduce latency and database overhead.`;
+                fallback = `${sourceName} leverages high-speed caching on ${targetName}.`;
             } else if (targetNode?.type === 'database') {
-                fallback = `${sourceName} persists specific system state to ${targetName} ensuring data durability and integrity.`;
-            } else if (targetNode?.type === 'gateway' || targetNode?.type === 'server') {
-                fallback = `${sourceName} routes ${flowDescription} to ${targetName} for centralized request processing.`;
-            } else if (sourceNode?.type === 'client') {
-                fallback = `${sourceName} initiates safe ${flowDescription} requests to ${targetName} to begin the user session.`;
+                fallback = `${sourceName} persists data to ${targetName}.`;
             } else {
-                fallback = `${sourceName} exchanges data with ${targetName}, ${flowDescription} across the network fabric.`;
+                fallback = `${sourceName} sends ${flowDescription} to ${targetName}.`;
             }
 
             return script[edge.id] || fallback;
         }
-    }, [activeStep, nodes, edges, script]);
+    }, [activeStep, nodes, edges, technicalScript, simpleScript, narrationMode]);
 
     return (
         <div className="absolute inset-0 z-[120] bg-slate-950 flex flex-col items-center justify-center overflow-hidden">
@@ -237,44 +238,61 @@ const CinematicReplayContent: React.FC<CinematicReplayProps> = ({ nodes, edges, 
                 <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-b from-white/5 to-transparent opacity-10 animate-scanline pointer-events-none z-[112]" />
             </div>
 
-            {/* Veo Vision HUD */}
-            {veoPrompt && (
-                <motion.div
-                    initial={{ opacity: 0, x: -30 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    className="absolute top-32 left-10 z-[60] max-w-xs pointer-events-none"
-                >
-                    <div className="bg-blue-600/10 backdrop-blur-md border-l-2 border-blue-500 p-4 rounded-r-lg">
-                        <div className="flex items-center gap-2 mb-2">
-                            <Video size={12} className="text-blue-400" />
-                            <span className="text-[10px] font-mono text-blue-400 uppercase tracking-widest">AI Visualization Dream</span>
+            {/* Veo Vision HUD Card */}
+            <AnimatePresence>
+                {showVeoPrompt && veoPrompt && (
+                    <motion.div
+                        initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                        animate={{ opacity: 1, scale: 1, y: 0 }}
+                        exit={{ opacity: 0, scale: 0.9, y: 20 }}
+                        className="absolute bottom-32 left-1/2 transform -translate-x-1/2 z-[130] w-full max-w-lg px-6"
+                    >
+                        <div className="glass-panel p-6 rounded-3xl border border-blue-500/30 shadow-[0_0_50px_rgba(59,130,246,0.2)]">
+                            <div className="flex items-center justify-between mb-4">
+                                <div className="flex items-center gap-2">
+                                    <div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
+                                    <span className="text-xs font-mono text-blue-400 uppercase tracking-widest font-bold">Veo Cinematic Vision</span>
+                                </div>
+                                <button onClick={() => setShowVeoPrompt(false)} className="text-slate-500 hover:text-white transition-colors">
+                                    <X size={16} />
+                                </button>
+                            </div>
+                            <p className="text-sm text-slate-200 leading-relaxed font-serif italic mb-4">
+                                "{veoPrompt}"
+                            </p>
+                            <div className="bg-blue-500/10 p-3 rounded-xl border border-blue-500/20">
+                                <span className="text-[10px] text-blue-300 font-mono block mb-1 uppercase tracking-tighter opacity-70">Suggested Command</span>
+                                <span className="text-[11px] text-blue-100 font-mono">/generate_veo_3d_walkthrough --prompt_ref current_vision</span>
+                            </div>
                         </div>
-                        <p className="text-[11px] text-slate-300 italic leading-relaxed">
-                            "{veoPrompt}"
-                        </p>
-                    </div>
-                </motion.div>
-            )}
+                    </motion.div>
+                )}
+            </AnimatePresence>
 
-            {/* Narrative HUD (Relocated to Top Center) */}
+            {/* Narrative HUD */}
             <AnimatePresence mode="wait">
                 {currentNarration && (
                     <motion.div
-                        key={`step-${activeStep}`}
+                        key={`${narrationMode}-step-${activeStep}`}
                         initial={{ opacity: 0, y: -20 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: -20 }}
                         className="absolute top-24 left-1/2 transform -translate-x-1/2 z-[55] w-full max-w-2xl px-4 pointer-events-none"
                     >
-                        <div className="bg-slate-900/40 backdrop-blur-sm border border-white/5 p-4 rounded-xl flex items-center gap-4 shadow-xl">
-                            <div className="hidden md:flex flex-col items-center justify-center p-2 bg-blue-500/10 rounded-lg border border-blue-500/20 min-w-[60px]">
-                                <Zap className="text-blue-400 w-4 h-4 mb-1" />
-                                <span className="text-[9px] font-mono text-blue-300 uppercase">STEP</span>
-                                <span className="text-xs font-bold text-white font-mono">{activeStep}</span>
+                        <div className={`bg-slate-900/40 backdrop-blur-sm border p-5 rounded-3xl flex items-center gap-6 shadow-2xl transition-all duration-500 ${narrationMode === 'simple' ? 'border-purple-500/30' : 'border-white/10'}`}>
+                            <div className={`hidden md:flex flex-col items-center justify-center p-3 rounded-2xl border min-w-[70px] transition-all duration-500 ${narrationMode === 'simple' ? 'bg-purple-500/10 border-purple-500/30' : 'bg-blue-500/10 border-blue-500/30'}`}>
+                                <Zap className={`w-5 h-5 mb-1 transition-colors duration-500 ${narrationMode === 'simple' ? 'text-purple-400' : 'text-blue-400'}`} />
+                                <span className="text-[10px] font-mono text-white/50 uppercase">STEP</span>
+                                <span className="text-sm font-bold text-white font-mono">{activeStep}</span>
                             </div>
 
                             <div className="flex-1 text-center md:text-left">
-                                <p className="text-sm md:text-base font-medium text-white/90 leading-relaxed font-sans drop-shadow-sm">
+                                <div className="flex items-center gap-2 mb-1 justify-center md:justify-start">
+                                    <span className={`text-[9px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full ${narrationMode === 'simple' ? 'bg-purple-500/20 text-purple-400' : 'bg-blue-500/20 text-blue-400'}`}>
+                                        {narrationMode === 'pro' ? 'Professional' : 'Simplified'}
+                                    </span>
+                                </div>
+                                <p className="text-sm md:text-lg font-medium text-white/95 leading-relaxed font-sans drop-shadow-sm">
                                     "{currentNarration}"
                                 </p>
                             </div>
@@ -287,7 +305,7 @@ const CinematicReplayContent: React.FC<CinematicReplayProps> = ({ nodes, edges, 
                 className={`w-full h-full relative perspective-container flex items-center justify-center`}
                 ref={replayContainerRef}
             >
-                <div className={`w-[95%] h-[90%] rounded-[3rem] overflow-hidden border  ${is3DMode ? 'border-cyan-500/20 shadow-[0_0_50px_rgba(6,182,212,0.1)] canvas-3d' : 'border-white/10 canvas-2d'}`}>
+                <div className={`w-[95%] h-[90%] rounded-[3.5rem] overflow-hidden border transition-all duration-1000 ${is3DMode ? 'border-cyan-500/20 shadow-[0_0_80px_rgba(6,182,212,0.15)] canvas-3d' : 'border-white/5 canvas-2d'}`}>
                     <ReactFlow
                         nodes={rfNodes}
                         edges={rfEdges}
@@ -312,6 +330,30 @@ const CinematicReplayContent: React.FC<CinematicReplayProps> = ({ nodes, edges, 
 
                 {/* HUD Controls */}
                 <div className="absolute top-10 right-10 flex items-center gap-3 z-[100]">
+                    {/* Narration Toggle */}
+                    <div className="bg-slate-900/80 backdrop-blur border border-white/10 p-1 rounded-xl flex gap-1 shadow-lg">
+                        <button
+                            onClick={() => setNarrationMode('pro')}
+                            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${narrationMode === 'pro' ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-400 hover:text-white'}`}
+                        >
+                            PRO
+                        </button>
+                        <button
+                            onClick={() => setNarrationMode('simple')}
+                            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${narrationMode === 'simple' ? 'bg-purple-600 text-white shadow-lg' : 'text-slate-400 hover:text-white'}`}
+                        >
+                            EASY
+                        </button>
+                    </div>
+
+                    <button
+                        onClick={() => setShowVeoPrompt(!showVeoPrompt)}
+                        className={`flex items-center gap-2 border px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-lg active:scale-95 ${showVeoPrompt ? 'bg-blue-600/20 border-blue-400 text-blue-300' : 'bg-slate-900 border-white/10 text-slate-400'}`}
+                        title="View Veo Cinematics"
+                    >
+                        <Video size={14} /> VEO
+                    </button>
+
                     <button
                         onClick={() => setIs3DMode(!is3DMode)}
                         className={`flex items-center gap-2 border px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-lg active:scale-95 ${is3DMode ? 'bg-cyan-600/20 border-cyan-400 text-cyan-300' : 'bg-slate-900 border-white/10 text-slate-400'}`}
@@ -319,12 +361,14 @@ const CinematicReplayContent: React.FC<CinematicReplayProps> = ({ nodes, edges, 
                         <Box size={14} /> {is3DMode ? '3D' : '2D'}
                     </button>
 
+                    <div className="h-8 w-px bg-white/10 mx-1" />
+
                     <div className="bg-slate-900/80 backdrop-blur border border-white/10 p-1 rounded-xl flex gap-1 shadow-lg">
                         {[0.5, 1, 2].map(speed => (
                             <button
                                 key={speed}
                                 onClick={() => setPlaybackSpeed(speed)}
-                                className={`px-2 py-1.5 rounded-lg text-[10px] font-bold transition-all ${playbackSpeed === speed ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-white'}`}
+                                className={`px-2 py-1.5 rounded-lg text-[10px] font-bold transition-all ${playbackSpeed === speed ? 'bg-white/20 text-white' : 'text-slate-400 hover:text-white'}`}
                             >
                                 {speed}x
                             </button>
@@ -333,24 +377,10 @@ const CinematicReplayContent: React.FC<CinematicReplayProps> = ({ nodes, edges, 
 
                     <button
                         onClick={() => setIsPlaying(!isPlaying)}
-                        className="flex items-center gap-2 bg-slate-900/80 backdrop-blur border border-white/10 px-5 py-2 rounded-xl text-xs font-bold text-white hover:bg-slate-800 transition-all shadow-lg active:scale-95"
+                        className="flex items-center gap-2 bg-slate-900 border border-white/10 px-5 py-2 rounded-xl text-xs font-bold text-white hover:bg-slate-800 transition-all shadow-lg active:scale-95"
                     >
                         {isPlaying ? <Pause size={14} fill="currentColor" /> : <Play size={14} fill="currentColor" />}
                         {isPlaying ? 'PAUSE' : 'PLAY'}
-                    </button>
-
-                    <button
-                        onClick={handleDownloadSnapshot}
-                        className="bg-slate-900/80 backdrop-blur border border-white/10 text-white p-2 rounded-xl shadow-lg hover:bg-slate-800 transition-all active:scale-95"
-                    >
-                        <Download size={16} />
-                    </button>
-
-                    <button
-                        onClick={() => { setActiveStep(0); setIsPlaying(true); }}
-                        className="bg-slate-900/80 backdrop-blur border border-white/10 text-white p-2 rounded-xl shadow-lg hover:bg-slate-800 transition-all active:scale-95"
-                    >
-                        <RefreshCw size={16} className={isPlaying ? 'animate-spin-slow' : ''} />
                     </button>
 
                     <button
@@ -359,38 +389,6 @@ const CinematicReplayContent: React.FC<CinematicReplayProps> = ({ nodes, edges, 
                     >
                         <X size={18} />
                     </button>
-                </div>
-
-                {/* Zoom Controls (Simulated for HUD feel) */}
-                <div className="absolute right-10 bottom-10 flex flex-col gap-2 z-[100]">
-                    <div className="bg-slate-900/80 backdrop-blur border border-white/10 rounded-lg p-2 flex flex-col gap-2 shadow-lg">
-                        <div className="text-[10px] text-center text-slate-500 font-mono">ZOOM</div>
-                        <div className="w-8 h-24 bg-slate-800 rounded relative overflow-hidden">
-                            <div className="absolute bottom-0 w-full bg-blue-500/50" style={{ height: '60%' }} />
-                            {/* Hash marks */}
-                            <div className="absolute inset-0 flex flex-col justify-between py-1 px-1">
-                                {[...Array(5)].map((_, i) => <div key={i} className="w-2 h-[1px] bg-white/20" />)}
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                {/* Step Progress HUD */}
-                <div className="absolute top-10 left-10 z-[100]">
-                    <div className="text-[10px] font-mono text-cyan-400/50 uppercase tracking-[0.5em] mb-2 drop-shadow-lg font-bold">Reconstruction Protocol</div>
-                    <div className="flex gap-1 bg-black/20 p-1 rounded-full backdrop-blur-sm">
-                        {Array.from({ length: totalSteps }).map((_, i) => (
-                            <motion.div
-                                key={i}
-                                animate={{
-                                    height: 4,
-                                    width: i === activeStep - 1 ? 24 : 8,
-                                    backgroundColor: i < activeStep ? '#22d3ee' : 'rgba(255,255,255,0.1)'
-                                }}
-                                className="rounded-full transition-all shadow-[0_0_5px_rgba(34,211,238,0.5)]"
-                            />
-                        ))}
-                    </div>
                 </div>
             </div>
         </div>
