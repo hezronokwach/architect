@@ -45,7 +45,8 @@ const App: React.FC = () => {
   const [showCinematicReplay, setShowCinematicReplay] = useState(false);
   const [technicalScript, setTechnicalScript] = useState<Record<string, string>>({});
   const [simpleScript, setSimpleScript] = useState<Record<string, string>>({});
-  const [veoPrompt, setVeoPrompt] = useState<string>('');
+  const [technicalVeoPrompt, setTechnicalVeoPrompt] = useState<string>('');
+  const [simpleVeoPrompt, setSimpleVeoPrompt] = useState<string>('');
   const [activeProposal, setActiveProposal] = useState<Proposal | null>(null);
   const [lastToolCallId, setLastToolCallId] = useState<string | null>(null);
   const [lastToolName, setLastToolName] = useState<string | null>(null);
@@ -110,7 +111,6 @@ const App: React.FC = () => {
         updatedAt: new Date().toISOString()
       }, { merge: true });
     } catch (error) {
-      console.error("Firestore Save Error:", error);
     }
   };
 
@@ -175,7 +175,6 @@ const App: React.FC = () => {
       const response = await sendMessageToGemini(userMsg.content, context);
       processGeminiResponse(response, nodes, edges, updatedMessages);
     } catch (error: any) {
-      console.error("Gemini Error:", error);
       setMessages(prev => [...prev, { id: generateId(), role: 'model', content: "Capacity reached. Please try again." }]);
     } finally {
       setIsStreaming(false);
@@ -252,23 +251,13 @@ const App: React.FC = () => {
   };
 
   const handleCinematicView = async () => {
-    console.log("Frontend: handleCinematicView triggered.");
-    if (nodes.length === 0) {
-      console.warn("Frontend: No nodes to render. Aborting.");
-      return;
-    }
-
     setIsGeneratingVideo(true);
     setVideoStatus('Analyzing Design Sequence...');
 
     try {
       const canvas = document.querySelector('.react-flow__renderer') as HTMLElement;
-      if (!canvas) {
-        console.error("Frontend: .react-flow__renderer NOT FOUND in DOM");
-        throw new Error("Canvas not found");
-      }
+      if (!canvas) throw new Error("Canvas not found");
 
-      console.log("Frontend: Capturing snapshot for Gemini context...");
       const snapshot = await html2canvas(canvas, {
         backgroundColor: '#0f172a',
         scale: 2,
@@ -282,18 +271,16 @@ const App: React.FC = () => {
       );
 
       if (result && result.technicalScript) {
-        console.log("Frontend: VideoService returned result with dual scripts.");
         setVideoStatus('Cinematic Protocol Ready!');
         setTechnicalScript(result.technicalScript);
         setSimpleScript(result.simpleScript);
-        setVeoPrompt(result.veoPrompt || '');
+        setTechnicalVeoPrompt(result.technicalVeoPrompt);
+        setSimpleVeoPrompt(result.simpleVeoPrompt);
         setShowCinematicReplay(true);
       } else {
-        console.error("Frontend: VideoService returned NULL/Empty result.");
         setVideoStatus('Failed to generate cinematic script.');
       }
     } catch (error) {
-      console.error("Frontend: Error generating cinematic video:", error);
       setVideoStatus('Error generating cinematic video.');
     } finally {
       setIsGeneratingVideo(false);
@@ -317,7 +304,7 @@ const App: React.FC = () => {
       link.download = `architect-design-${Date.now()}.png`;
       link.click();
     } catch (err) {
-      console.error("Export failed:", err);
+      // Silent fail
     }
   };
 
@@ -337,7 +324,7 @@ const App: React.FC = () => {
   };
 
   const handleExportChat = () => {
-    // ... (logic remains same)
+    // Logic here
   };
 
   const handleNewChat = async () => {
@@ -401,8 +388,11 @@ const App: React.FC = () => {
             edges={edges}
             technicalScript={technicalScript}
             simpleScript={simpleScript}
-            veoPrompt={veoPrompt}
-            onClose={() => setShowCinematicReplay(false)}
+            technicalVeoPrompt={technicalVeoPrompt}
+            simpleVeoPrompt={simpleVeoPrompt}
+            onClose={() => {
+              setShowCinematicReplay(false);
+            }}
           />
         )}
 

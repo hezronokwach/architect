@@ -22,7 +22,6 @@ async function withRetry<T>(fn: () => Promise<T>, maxRetries: number = 3): Promi
 
       if (isRetryable && i < maxRetries - 1) {
         const delay = Math.pow(2, i) * 1000 + Math.random() * 1000;
-        console.warn(`Gemini overloaded or rate-limited. Retrying in ${Math.round(delay)}ms... (Attempt ${i + 1}/${maxRetries})`);
         await new Promise(resolve => setTimeout(resolve, delay));
         continue;
       }
@@ -34,11 +33,7 @@ async function withRetry<T>(fn: () => Promise<T>, maxRetries: number = 3): Promi
 
 export const initializeGeminiChat = (): Chat => {
   const apiKey = import.meta.env.VITE_GEMINI_API_KEY || '';
-  console.log("Initializing Gemini Chat. Key present:", !!apiKey);
 
-  if (!apiKey) {
-    console.error("VITE_GEMINI_API_KEY is missing! Check your .env file.");
-  }
 
   const ai = new GoogleGenAI({ apiKey });
 

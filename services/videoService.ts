@@ -4,8 +4,9 @@ import { SystemNode, SystemEdge } from "../types";
 export interface CinematicResult {
     snapshotUrl: string;
     technicalScript: Record<string, string>; // ID -> Technical insight
-    simpleScript: Record<string, string>;    // ID -> Simple metaphor for non-techies
-    veoPrompt: string;                       // Cinematic description
+    simpleScript: Record<string, string>;    // ID -> Domain-aware metaphor
+    technicalVeoPrompt: string;              // Cinematic description for techies
+    simpleVeoPrompt: string;                 // Metaphor-driven story description
 }
 
 export const generateCinematicVideo = async (
@@ -13,12 +14,14 @@ export const generateCinematicVideo = async (
     nodes: SystemNode[],
     edges: SystemEdge[]
 ): Promise<CinematicResult> => {
-    console.log("VideoService: Generating Dual-Mode Director's Script...");
 
-    const diagramJson = JSON.stringify({
+    const diagramData = {
         nodes: nodes.map(n => ({ id: n.id, label: n.label, type: n.type, description: n.description })),
         edges: edges.map(e => ({ from: e.fromId, to: e.toId, label: e.label }))
-    });
+    };
+
+    const diagramJson = JSON.stringify(diagramData, null, 2);
+
     const apiKey = import.meta.env.VITE_GEMINI_API_KEY || '';
     if (!apiKey) throw new Error("Missing VITE_GEMINI_API_KEY");
 
@@ -26,36 +29,39 @@ export const generateCinematicVideo = async (
     const allIds = [...nodes, ...edges].map(item => item.id);
 
     const prompt = `
-    Act as a Master Architect and a World-Class Explainer. 
-    Analyze this architecture (JSON provided) and generate a TWO-MODE narrated experience.
+    Act as a Master Architect and a World-Class Storyteller for non-technical people.
+    Analyze this architecture (JSON provided) and generate a DUAL-MODE cinematic experience.
     
+    DIAGRAM DATA (Current System):
+    ${diagramJson}
+
     REQUIRED IDs:
     ${allIds.join(', ')}
 
     TASKS:
-    1. For EVERY ID, write a "technicalScript" entry: Professional, deep architectural insight (e.g., "Implementing a write-through cache to minimize DB latency").
-    2. For EVERY ID, write a "simpleScript" entry: A clever metaphor for non-techies (e.g., "Like a sticky note on a fridge so you don't have to look in the heavy cookbook").
-    3. Generate a "veoPrompt": A vivid, 3-sentence description of this system as a high-end cinematic 3D world (e.g., "A sprawling diamond-grid metropolis where neon energy pulses zip through translucent glass highways...").
+    1. "technicalScript": For EVERY ID (nodes and edges), provide a deep technical insight (e.g., "Using Redis for sub-millisecond session state").
+    2. "simpleScript": For EVERY ID, provide a domain-aware metaphor. 
+    3. "technicalVeoPrompt": A professional 3-sentence visual explanation of this system, focusing on its core operation and data flow across nodes.
+    4. "simpleVeoPrompt": A clear, educational 3-sentence visual story that explains how a user's request travels through this architecture. 
 
     CONSTRAINTS:
-    - BE CREATIVE. Avoid "This node does X". Use active, evocative language.
-    - Metaphors should be relatable (kitchens, post offices, traffic, library).
+    - BE ARCHITECTURALLY ACCURATE even in simple mode.
+    - Metaphors must be consistent across the whole system.
     - Return a single JSON object.
-
-    DIAGRAM DATA:
-    ${diagramJson}
 
     JSON STRUCTURE:
     {
       "technicalScript": { "id1": "...", "id2": "..." },
       "simpleScript": { "id1": "...", "id2": "..." },
-      "veoPrompt": "..."
+      "technicalVeoPrompt": "...",
+      "simpleVeoPrompt": "..."
     }
     `;
 
+
     try {
         const response = await ai.models.generateContent({
-            model: "gemini-2.5-flash",
+            model: "gemini-2.0-flash",
             contents: [{
                 role: 'user',
                 parts: [{ text: prompt }]
@@ -63,21 +69,22 @@ export const generateCinematicVideo = async (
             config: { responseMimeType: "application/json" }
         });
 
-        const data = JSON.parse(response.candidates?.[0]?.content?.parts?.[0]?.text || "{}");
+        const data = JSON.parse(response.text || "{}");
 
         return {
             snapshotUrl: screenshotBase64,
             technicalScript: data.technicalScript || {},
             simpleScript: data.simpleScript || {},
-            veoPrompt: data.veoPrompt || "A futuristic digital landscape pulsing with data energy."
+            technicalVeoPrompt: data.technicalVeoPrompt || "A neon data metropolis.",
+            simpleVeoPrompt: data.simpleVeoPrompt || "A digital story unfolding in a real-world scenario."
         };
     } catch (error) {
-        console.error("VideoService: Generation ERROR:", error);
         return {
             snapshotUrl: screenshotBase64,
             technicalScript: {},
             simpleScript: {},
-            veoPrompt: "A professional architectural walkthrough."
+            technicalVeoPrompt: "A professional architectural walkthrough.",
+            simpleVeoPrompt: "A simple explanation of the system."
         };
     }
 };

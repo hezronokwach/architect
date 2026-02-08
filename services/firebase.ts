@@ -10,11 +10,7 @@ const firebaseConfig = {
     appId: import.meta.env.VITE_FIREBASE_APP_ID
 };
 
-console.log("Initializing Firebase with Project ID:", firebaseConfig.projectId);
 
-if (firebaseConfig.apiKey === 'your_api_key' || !firebaseConfig.apiKey) {
-    console.warn("Firebase API Key is still a placeholder! Persistence will not work.");
-}
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);

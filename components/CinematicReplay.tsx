@@ -16,7 +16,7 @@ import ArchitectNode from './ArchitectNode';
 import ArchitectEdge from './ArchitectEdge';
 import { getLayoutedElements } from '../services/layoutService';
 import { SystemNode, SystemEdge } from '../types';
-import { X, Play, Pause, RefreshCw, Layers, Zap, Download, Box, Video } from 'lucide-react';
+import { X, Play, Pause, RefreshCw, Layers, Zap, Download, Box, Video, Film, Loader2 } from 'lucide-react';
 
 const nodeTypes = { architect: ArchitectNode };
 const edgeTypes = { architect: ArchitectEdge };
@@ -26,17 +26,25 @@ interface CinematicReplayProps {
     edges: SystemEdge[];
     technicalScript: Record<string, string>;
     simpleScript: Record<string, string>;
-    veoPrompt?: string;
+    technicalVeoPrompt: string;
+    simpleVeoPrompt: string;
     onClose: () => void;
 }
 
-const CinematicReplayContent: React.FC<CinematicReplayProps> = ({ nodes, edges, technicalScript, simpleScript, veoPrompt, onClose }) => {
+const CinematicReplayContent: React.FC<CinematicReplayProps> = ({
+    nodes,
+    edges,
+    technicalScript,
+    simpleScript,
+    technicalVeoPrompt,
+    simpleVeoPrompt,
+    onClose
+}) => {
     const [activeStep, setActiveStep] = useState(0);
     const [isPlaying, setIsPlaying] = useState(true);
     const [playbackSpeed, setPlaybackSpeed] = useState(1);
     const [is3DMode, setIs3DMode] = useState(true);
     const [narrationMode, setNarrationMode] = useState<'pro' | 'simple'>('pro');
-    const [showVeoPrompt, setShowVeoPrompt] = useState(false);
 
     const { setCenter } = useReactFlow();
     const replayContainerRef = useRef<HTMLDivElement>(null);
@@ -134,7 +142,7 @@ const CinematicReplayContent: React.FC<CinematicReplayProps> = ({ nodes, edges, 
         }
     }, [activeStep, nodes, edges, setRFNodes, setRFEdges, setCenter]);
 
-    const { getNodes, getEdges, fitView } = useReactFlow();
+    const { fitView } = useReactFlow();
 
     const handleDownloadSnapshot = async () => {
         if (!replayContainerRef.current) return;
@@ -162,10 +170,9 @@ const CinematicReplayContent: React.FC<CinematicReplayProps> = ({ nodes, edges, 
 
                 const link = document.createElement('a');
                 link.href = screenshot.toDataURL('image/png');
-                link.download = `architect-cinematic-flow-${activeStep}.png`;
+                link.download = "architect-cinematic-flow-" + activeStep + ".png";
                 link.click();
             } catch (err) {
-                console.error("Snapshot failed:", err);
             } finally {
                 canvas.style.cssText = originalStyle;
             }
@@ -173,101 +180,54 @@ const CinematicReplayContent: React.FC<CinematicReplayProps> = ({ nodes, edges, 
     };
 
     const currentNarration = useMemo(() => {
-        if (activeStep <= 0) return "Click play to begin the architectural walkthrough.";
+        if (activeStep <= 0) return narrationMode === 'pro' ? "Click play to begin the technical walkthrough." : "Let's see how your system works in plain English!";
         const script = narrationMode === 'pro' ? technicalScript : simpleScript;
 
         if (activeStep <= nodes.length) {
             const node = nodes[activeStep - 1];
             if (!node) return "...";
-            const nodeFallback = node.description
-                ? `${node.label} serves as a ${node.description.toLowerCase()}`
-                : `Initializing ${node.label} as a core ${node.type} component.`;
-            return script[node.id] || nodeFallback;
+            return script[node.id] || node.description || `Initializing ${node.label}.`;
         } else {
             const edge = edges[activeStep - nodes.length - 1];
             if (!edge) return "...";
-            const sourceNode = nodes.find(n => n.id === edge.fromId);
-            const targetNode = nodes.find(n => n.id === edge.toId);
-            const sourceName = sourceNode?.label || 'Primary component';
-            const targetName = targetNode?.label || 'Target module';
-
-            let fallback = "";
-            const flowDescription = edge.label ? `transmitting ${edge.label.toLowerCase()}` : "handling traffic";
-
-            if (targetNode?.type === 'cache') {
-                fallback = `${sourceName} leverages high-speed caching on ${targetName}.`;
-            } else if (targetNode?.type === 'database') {
-                fallback = `${sourceName} persists data to ${targetName}.`;
-            } else {
-                fallback = `${sourceName} sends ${flowDescription} to ${targetName}.`;
-            }
-
-            return script[edge.id] || fallback;
+            return script[edge.id] || `Data streams between components.`;
         }
     }, [activeStep, nodes, edges, technicalScript, simpleScript, narrationMode]);
+
+    const activeVeoPrompt = narrationMode === 'pro' ? technicalVeoPrompt : simpleVeoPrompt;
 
     return (
         <div className="absolute inset-0 z-[120] bg-slate-950 flex flex-col items-center justify-center overflow-hidden">
             <style>{`
-        @keyframes pulse-active {
-          0%, 100% { opacity: 1; stroke-width: 6; filter: drop-shadow(0 0 15px #00ff88); }
-          50% { opacity: 0.6; stroke-width: 4; filter: drop-shadow(0 0 5px #00ff88); }
-        }
-        .edge-active {
-          animation: pulse-active 1s infinite ease-in-out;
-        }
-        .perspective-container {
-          perspective: 1500px;
-          transform-style: preserve-3d;
-        }
-        .canvas-3d {
-          transform: rotateX(25deg) rotateY(-5deg) rotateZ(0deg) translateY(-5%);
-          box-shadow: 0 50px 100px rgba(0,0,0,0.8), 0 0 50px rgba(59,130,246,0.1);
-          transition: transform 1s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-        .canvas-2d {
-          transform: rotateX(0deg) rotateY(0deg) rotateZ(0deg) translateY(0%);
-          transition: transform 1s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-      `}</style>
+                @keyframes pulse-active {
+                    0%, 100% { opacity: 1; stroke-width: 6; filter: drop-shadow(0 0 15px #00ff88); }
+                    50% { opacity: 0.6; stroke-width: 4; filter: drop-shadow(0 0 5px #00ff88); }
+                }
+                .edge-active { animation: pulse-active 1s infinite ease-in-out; }
+                .perspective-container { perspective: 1500px; transform-style: preserve-3d; }
+                .canvas-3d {
+                    transform: rotateX(25deg) rotateY(-5deg) rotateZ(0deg) translateY(-5%);
+                    box-shadow: 0 50px 100px rgba(0, 0, 0, 0.8), 0 0 50px rgba(59, 130, 246, 0.1);
+                    transition: transform 1s cubic-bezier(0.4, 0, 0.2, 1);
+                }
+                .canvas-2d {
+                    transform: rotateX(0deg) rotateY(0deg) rotateZ(0deg) translateY(0%);
+                    transition: transform 1s cubic-bezier(0.4, 0, 0.2, 1);
+                }
+                .glass-panel {
+                    background: rgba(15, 23, 42, 0.6);
+                    backdrop-filter: blur(12px);
+                    border: 1px solid rgba(255, 255, 255, 0.1);
+                    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+                }
+            `}</style>
 
-            {/* CRT/Scanline Effects */}
+            {/* CRT Effects */}
             <div className="absolute inset-0 pointer-events-none z-[110] overflow-hidden rounded-[3rem]">
                 <div className="absolute inset-0 bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.25)_50%),linear-gradient(90deg,rgba(255,0,0,0.06),rgba(0,255,0,0.02),rgba(0,0,255,0.06))] z-[110] bg-[length:100%_2px,3px_100%] pointer-events-none" />
                 <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_50%,rgba(0,0,0,0.6)_100%)] z-[111] pointer-events-none" />
-                <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-b from-white/5 to-transparent opacity-10 animate-scanline pointer-events-none z-[112]" />
             </div>
 
-            {/* Veo Vision HUD Card */}
-            <AnimatePresence>
-                {showVeoPrompt && veoPrompt && (
-                    <motion.div
-                        initial={{ opacity: 0, scale: 0.9, y: 20 }}
-                        animate={{ opacity: 1, scale: 1, y: 0 }}
-                        exit={{ opacity: 0, scale: 0.9, y: 20 }}
-                        className="absolute bottom-32 left-1/2 transform -translate-x-1/2 z-[130] w-full max-w-lg px-6"
-                    >
-                        <div className="glass-panel p-6 rounded-3xl border border-blue-500/30 shadow-[0_0_50px_rgba(59,130,246,0.2)]">
-                            <div className="flex items-center justify-between mb-4">
-                                <div className="flex items-center gap-2">
-                                    <div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
-                                    <span className="text-xs font-mono text-blue-400 uppercase tracking-widest font-bold">Veo Cinematic Vision</span>
-                                </div>
-                                <button onClick={() => setShowVeoPrompt(false)} className="text-slate-500 hover:text-white transition-colors">
-                                    <X size={16} />
-                                </button>
-                            </div>
-                            <p className="text-sm text-slate-200 leading-relaxed font-serif italic mb-4">
-                                "{veoPrompt}"
-                            </p>
-                            <div className="bg-blue-500/10 p-3 rounded-xl border border-blue-500/20">
-                                <span className="text-[10px] text-blue-300 font-mono block mb-1 uppercase tracking-tighter opacity-70">Suggested Command</span>
-                                <span className="text-[11px] text-blue-100 font-mono">/generate_veo_3d_walkthrough --prompt_ref current_vision</span>
-                            </div>
-                        </div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
 
             {/* Narrative HUD */}
             <AnimatePresence mode="wait">
@@ -289,7 +249,7 @@ const CinematicReplayContent: React.FC<CinematicReplayProps> = ({ nodes, edges, 
                             <div className="flex-1 text-center md:text-left">
                                 <div className="flex items-center gap-2 mb-1 justify-center md:justify-start">
                                     <span className={`text-[9px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full ${narrationMode === 'simple' ? 'bg-purple-500/20 text-purple-400' : 'bg-blue-500/20 text-blue-400'}`}>
-                                        {narrationMode === 'pro' ? 'Professional' : 'Simplified'}
+                                        {narrationMode === 'pro' ? 'Technical Architecture' : 'Simplified Domain Story'}
                                     </span>
                                 </div>
                                 <p className="text-sm md:text-lg font-medium text-white/95 leading-relaxed font-sans drop-shadow-sm">
@@ -302,7 +262,7 @@ const CinematicReplayContent: React.FC<CinematicReplayProps> = ({ nodes, edges, 
             </AnimatePresence>
 
             <div
-                className={`w-full h-full relative perspective-container flex items-center justify-center`}
+                className="w-full h-full relative perspective-container flex items-center justify-center"
                 ref={replayContainerRef}
             >
                 <div className={`w-[95%] h-[90%] rounded-[3.5rem] overflow-hidden border transition-all duration-1000 ${is3DMode ? 'border-cyan-500/20 shadow-[0_0_80px_rgba(6,182,212,0.15)] canvas-3d' : 'border-white/5 canvas-2d'}`}>
@@ -336,23 +296,16 @@ const CinematicReplayContent: React.FC<CinematicReplayProps> = ({ nodes, edges, 
                             onClick={() => setNarrationMode('pro')}
                             className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${narrationMode === 'pro' ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-400 hover:text-white'}`}
                         >
-                            PRO
+                            TECH
                         </button>
                         <button
                             onClick={() => setNarrationMode('simple')}
                             className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${narrationMode === 'simple' ? 'bg-purple-600 text-white shadow-lg' : 'text-slate-400 hover:text-white'}`}
                         >
-                            EASY
+                            STORY
                         </button>
                     </div>
 
-                    <button
-                        onClick={() => setShowVeoPrompt(!showVeoPrompt)}
-                        className={`flex items-center gap-2 border px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-lg active:scale-95 ${showVeoPrompt ? 'bg-blue-600/20 border-blue-400 text-blue-300' : 'bg-slate-900 border-white/10 text-slate-400'}`}
-                        title="View Veo Cinematics"
-                    >
-                        <Video size={14} /> VEO
-                    </button>
 
                     <button
                         onClick={() => setIs3DMode(!is3DMode)}
