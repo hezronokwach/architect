@@ -324,7 +324,14 @@ const App: React.FC = () => {
   };
 
   const handleExportChat = () => {
-    // Logic here
+    const chatContent = messages.map(m => `[${m.role.toUpperCase()}] ${m.content}`).join('\n\n');
+    const blob = new Blob([chatContent], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `architect-chat-${Date.now()}.txt`;
+    link.click();
+    URL.revokeObjectURL(url);
   };
 
   const handleNewChat = async () => {
