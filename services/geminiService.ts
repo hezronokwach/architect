@@ -38,7 +38,7 @@ export const initializeGeminiChat = (): Chat => {
   const ai = new GoogleGenAI({ apiKey });
 
   chatSession = ai.chats.create({
-    model: 'gemini-3-flash-preview',
+    model: 'gemini-2.5-flash',
     config: {
       systemInstruction: SYSTEM_INSTRUCTION,
       temperature: 0.5,
@@ -51,13 +51,18 @@ export const initializeGeminiChat = (): Chat => {
 
 export const sendMessageToGemini = async (
   message: string,
-  currentContext: string
+  currentContext: string,
+  activeProposal?: any
 ): Promise<GenerateContentResponse> => {
   if (!chatSession) {
     initializeGeminiChat();
   }
 
-  const fullMessage = `[CURRENT DIAGRAM STATE: ${currentContext}] \n\n User Request: ${message}`;
+  let fullMessage = `[CURRENT DIAGRAM STATE: ${currentContext}] \n\n User Request: ${message}`;
+
+  if (activeProposal) {
+    fullMessage += `\n\n[IMPORTANT: PENDING PROPOSAL DETECTED]\nThere is currently a pending proposal matching this structure: ${JSON.stringify(activeProposal)}. The user has NOT confirmed it yet and is asking a question or making a comment.\n\nYOU MUST:\n1. Answer the user's question or address their comment naturally.\n2. IMMEDIATELY AFTER your text response, YOU MUST CALL THE TOOL '${activeProposal.type === 'node' ? 'propose_node' : 'propose_connection'}' AGAIN using the EXACT SAME ARGUMENTS as the pending proposal.\n\nThis ensures the proposal remains visible to the user. DO NOT forget to call the tool again context will be lost.`;
+  }
 
   return await withRetry(() => chatSession!.sendMessage({ message: fullMessage }));
 };

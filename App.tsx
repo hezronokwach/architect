@@ -172,7 +172,7 @@ const App: React.FC = () => {
         nodes: nodes.map(n => ({ id: n.id, label: n.label })),
         edges: edges.map(e => ({ from: e.fromId, to: e.toId }))
       });
-      const response = await sendMessageToGemini(userMsg.content, context);
+      const response = await sendMessageToGemini(userMsg.content, context, activeProposal);
       processGeminiResponse(response, nodes, edges, updatedMessages);
     } catch (error: any) {
       setMessages(prev => [...prev, { id: generateId(), role: 'model', content: "Capacity reached. Please try again." }]);
