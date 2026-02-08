@@ -255,12 +255,15 @@ const App: React.FC = () => {
     setVideoStatus('Analyzing Design Sequence...');
 
     try {
-      const canvas = document.querySelector('.react-flow__renderer') as HTMLElement;
+      const canvas = document.querySelector('.react-flow') as HTMLElement;
       if (!canvas) throw new Error("Canvas not found");
 
       const snapshot = await html2canvas(canvas, {
         backgroundColor: '#0f172a',
         scale: 2,
+        useCORS: true,
+        allowTaint: true,
+        foreignObjectRendering: true,
       });
       const base64Image = snapshot.toDataURL('image/png');
 
@@ -288,7 +291,7 @@ const App: React.FC = () => {
   };
 
   const handleExportImage = async () => {
-    const canvas = document.querySelector('.react-flow__renderer') as HTMLElement;
+    const canvas = document.querySelector('.react-flow') as HTMLElement;
     if (!canvas) return;
 
     try {
@@ -297,7 +300,8 @@ const App: React.FC = () => {
         scale: 2,
         useCORS: true,
         allowTaint: true,
-        logging: false
+        logging: false,
+        foreignObjectRendering: true,
       });
       const link = document.createElement('a');
       link.href = snapshot.toDataURL('image/png');
