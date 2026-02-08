@@ -67,7 +67,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
         <div className="flex items-center justify-between relative z-10">
           <div>
             <h2 className="text-lg font-bold flex items-center gap-2 text-white tracking-wide">
-              <Bot className="text-cyan-400 drop-shadow-[0_0_8px_rgba(34,211,238,0.8)]" /> ARCHITECT<span className="text-cyan-400">.AI</span>
+              <img src="/logo.svg" alt="Architect Logo" className="w-8 h-8 drop-shadow-[0_0_8px_rgba(34,211,238,0.8)]" /> ARCHITECT<span className="text-cyan-400">.AI</span>
             </h2>
             <div className="flex items-center gap-2 text-xs text-slate-400 font-mono mt-1">
               <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />

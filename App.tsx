@@ -366,7 +366,7 @@ const App: React.FC = () => {
             <div className="relative">
               <div className="absolute -inset-4 bg-blue-500/20 blur-2xl rounded-full animate-pulse" />
               <div className="w-24 h-24 rounded-2xl bg-slate-900 border border-blue-500/50 flex items-center justify-center relative shadow-2xl">
-                <Video className="w-10 h-10 text-blue-400 animate-bounce" />
+                <img src="/logo.svg" alt="Architect Logo" className="w-12 h-12 animate-pulse" />
                 <div className="absolute top-0 right-0 p-1">
                   <div className="w-2 h-2 rounded-full bg-red-500 animate-ping" />
                 </div>
