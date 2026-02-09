@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="./public/architect_logo.png" width="120" height="120" alt="Architect AI Logo" />
+  <img src="./public/logo.svg" width="120" height="120" alt="Architect AI Logo" />
   <h1>Architect AI</h1>
   <p><strong>Designing Production-Ready Systems with Cinematic Clarity</strong></p>
   <p><em>Transforming abstract ideas into production-ready architectures with narrative intelligence.</em></p>
@@ -7,11 +7,11 @@
 
 ---
 
-## 🚀 Overview
+## Overview
 
 Architect AI is a collaborative, AI-powered whiteboard designed for senior engineers and system architects. It leverages **Gemini 3.0 Flash** to design systems that bridge the gap between a simple MVP and a production-grade infrastructure, providing real-time technical explanations and cinematic visualizations of the design process.
 
-## ✨ Key Features
+## Key Features
 
 - **Balanced Professional Mode**: Defaults to modern best practices (Auth, Load Balancers, CDNs, Caches) while avoiding enterprise bloat unless requested.
 - **Cinematic Replay**: A narrative-driven playback mode that walks through the "Why" and "How" of your architecture as it was built.
@@ -19,7 +19,7 @@ Architect AI is a collaborative, AI-powered whiteboard designed for senior engin
 - **Undo/Redo & Versioning**: Complete history management with Firestore synchronization for persistence across sessions.
 - **Professional Export**: Download high-resolution architecture snapshots and full technical chat history.
 
-## 🛠️ Tech Stack
+## Tech Stack
 
 - **Intelligence**: Google Gemini 3.0 Flash (via Google AI Studio)
 - **Frontend**: React, TypeScript, Vite
@@ -27,7 +27,7 @@ Architect AI is a collaborative, AI-powered whiteboard designed for senior engin
 - **Persistence**: Firebase Firestore
 - **Styling**: Vanilla CSS (Premium Dark Theme/Glassmorphism)
 
-## 🏁 Getting Started
+## Getting Started
 
 ### Prerequisites
 - Node.js (v18+)
@@ -66,5 +66,5 @@ Architect AI is a collaborative, AI-powered whiteboard designed for senior engin
    npm run dev
    ```
 
-## 📄 License
+## License
 This project is licensed under the Apache 2.0 License - see the [LICENSE](LICENSE) file for details.
