@@ -1,7 +1,7 @@
 <div align="center">
   <img src="./public/architect_logo.png" width="120" height="120" alt="Architect AI Logo" />
   <h1>Architect AI</h1>
-  <p><strong>The Cinematic System Architect</strong></p>
+  <p><strong>Designing Production-Ready Systems with Cinematic Clarity</strong></p>
   <p><em>Transforming abstract ideas into production-ready architectures with narrative intelligence.</em></p>
 </div>
 
@@ -9,7 +9,7 @@
 
 ## 🚀 Overview
 
-Architect AI is a collaborative, AI-powered whiteboard designed for senior engineers and system architects. It leverages **Gemini Flash 2.0** to design systems that bridge the gap between a simple MVP and a production-grade infrastructure, providing real-time technical explanations and cinematic visualizations of the design process.
+Architect AI is a collaborative, AI-powered whiteboard designed for senior engineers and system architects. It leverages **Gemini 3.0 Flash** to design systems that bridge the gap between a simple MVP and a production-grade infrastructure, providing real-time technical explanations and cinematic visualizations of the design process.
 
 ## ✨ Key Features
 
@@ -21,7 +21,7 @@ Architect AI is a collaborative, AI-powered whiteboard designed for senior engin
 
 ## 🛠️ Tech Stack
 
-- **Intelligence**: Google Gemini Flash 2.0 (via Google AI Studio)
+- **Intelligence**: Google Gemini 3.0 Flash (via Google AI Studio)
 - **Frontend**: React, TypeScript, Vite
 - **Diagramming**: React Flow (XYFlow)
 - **Persistence**: Firebase Firestore
